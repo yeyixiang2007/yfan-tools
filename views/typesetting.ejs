@@ -1,0 +1,172 @@
+<%- /* content block for layout */ '' %>
+<% var content = ''; %>
+
+<div>
+  <div class="mb-6">
+    <a href="/" class="text-sm text-blue-500 hover:text-blue-700">&larr; 返回首页</a>
+  </div>
+
+  <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 md:p-8">
+    <div class="flex items-center gap-3 mb-4">
+      <span class="text-3xl"><%- tool.icon %></span>
+      <div>
+        <h1 class="text-2xl font-bold text-gray-800"><%- tool.name %></h1>
+        <p class="text-sm text-gray-500"><%- tool.desc %></p>
+      </div>
+    </div>
+
+    <div class="border-t border-gray-100 pt-6 mt-2">
+      <!-- 输入区域 -->
+      <div class="mb-4">
+        <label class="block text-sm font-medium text-gray-700 mb-1">输入文本</label>
+        <textarea id="input-text" rows="8"
+          class="w-full px-4 py-3 border border-gray-300 rounded-lg font-mono text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none resize-y"
+          placeholder="粘贴中英文混排文本...&#10;例如: 你好World这是一个Test例子请使用Chrome浏览器访问http://example.com">你好World这是一个Test例子请使用Chrome浏览器访问http://example.com</textarea>
+      </div>
+
+      <!-- 选项 -->
+      <div class="flex flex-wrap gap-4 mb-4">
+        <label class="flex items-center gap-2 text-sm text-gray-700">
+          <input type="checkbox" id="opt-space" checked>
+          中英文间加空格
+        </label>
+        <label class="flex items-center gap-2 text-sm text-gray-700">
+          <input type="checkbox" id="opt-punct" checked>
+          修正标点符号
+        </label>
+        <label class="flex items-center gap-2 text-sm text-gray-700">
+          <input type="checkbox" id="opt-number-space" checked>
+          数字与单位间加空格
+        </label>
+        <label class="flex items-center gap-2 text-sm text-gray-700">
+          <input type="checkbox" id="opt-ellipsis" checked>
+          统一省略号
+        </label>
+      </div>
+
+      <!-- 操作按钮 -->
+      <div class="flex gap-2 mb-4">
+        <button onclick="formatText()"
+          class="px-5 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium text-sm">格式化</button>
+        <button onclick="clearText()"
+          class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 text-sm">清空</button>
+      </div>
+
+      <!-- 输出区域 -->
+      <div class="mb-2">
+        <label class="block text-sm font-medium text-gray-700 mb-1">格式化结果</label>
+        <textarea id="output-text" rows="8"
+          class="w-full px-4 py-3 border border-gray-300 rounded-lg font-mono text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none resize-y" readonly></textarea>
+      </div>
+
+      <!-- 统计 -->
+      <div id="stats" class="text-xs text-gray-500 mb-4"></div>
+
+      <!-- 操作说明 -->
+      <div class="mt-4 p-4 bg-gray-50 rounded-lg border border-gray-100">
+        <h3 class="text-sm font-medium text-gray-700 mb-2">📖 规则说明</h3>
+        <ul class="text-xs text-gray-600 space-y-1">
+          <li>• 中文字符与英文字母/数字之间加空格</li>
+          <li>• 中文标点使用全角（，。！？等），英文标点使用半角</li>
+          <li>• 数字与单位/百分号之间加空格（100 MB、50 %）</li>
+          <li>• 英文句子末尾使用半角句号</li>
+          <li>• 中文引号使用「」或“”</li>
+          <li>• 连续句号统一为中文省略号……</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+function formatText() {
+  var input = document.getElementById('input-text');
+  var output = document.getElementById('output-text');
+  var stats = document.getElementById('stats');
+  var text = input.value;
+
+  if (!text) { output.value = ''; stats.textContent = ''; return; }
+
+  var origLen = text.length;
+  var origCn = (text.match(/[\u4e00-\u9fff\u3400-\u4dbf\uf900-\ufaff]/g) || []).length;
+  var origEn = (text.match(/[a-zA-Z]/g) || []).length;
+  var origNum = (text.match(/[0-9]/g) || []).length;
+
+  // 1) 统一省略号：超过 2 个的连续句号 → 中文省略号
+  if (document.getElementById('opt-ellipsis').checked) {
+    text = text.replace(/\.{3,}/g, '…');
+    text = text.replace(/…{2,}/g, '……');
+  }
+
+  // 2) 修正标点符号
+  if (document.getElementById('opt-punct').checked) {
+    // 英文逗号/句号前后有中文 → 转全角
+    text = text.replace(/([\u4e00-\u9fff])\.(?=[\u4e00-\u9fff\u3000-\u303f\uff00-\uffef])/g, '$1。');
+    text = text.replace(/([\u4e00-\u9fff]),(?=[\u4e00-\u9fff\u3000-\u303f\uff00-\uffef])/g, '$1，');
+    text = text.replace(/([\u4e00-\u9fff])!(?=[\u4e00-\u9fff\u3000-\u303f\uff00-\uffef])/g, '$1！');
+    text = text.replace(/([\u4e00-\u9fff])\?(?=[\u4e00-\u9fff\u3000-\u303f\uff00-\uffef])/g, '$1？');
+    text = text.replace(/([\u4e00-\u9fff]):(?=[\u4e00-\u9fff\u3000-\u303f\uff00-\uffef])/g, '$1：');
+    text = text.replace(/([\u4e00-\u9fff]);(?=[\u4e00-\u9fff\u3000-\u303f\uff00-\uffef])/g, '$1；');
+
+    // 英文句子末尾用半角句号（中文后接英文句点的情况复杂，不做反转）
+    // 括号匹配：中文语境下全角括号
+    text = text.replace(/（(?=[^）]*[\u4e00-\u9fff])/g, '（');
+    text = text.replace(/\((?=[^)]*[\u4e00-\u9fff][^)]*\))/g, '(');
+  }
+
+  // 3) 中英文间加空格
+  if (document.getElementById('opt-space').checked) {
+    // 中文后接英文字母
+    text = text.replace(/([\u4e00-\u9fff\u3400-\u4dbf\uf900-\ufaff])([a-zA-Z])/g, '$1 $2');
+    // 英文字母后接中文
+    text = text.replace(/([a-zA-Z])([\u4e00-\u9fff\u3400-\u4dbf\uf900-\ufaff])/g, '$1 $2');
+    // 中文后接数字
+    text = text.replace(/([\u4e00-\u9fff\u3400-\u4dbf\uf900-\ufaff])([0-9])/g, '$1 $2');
+    // 数字后接中文
+    text = text.replace(/([0-9])([\u4e00-\u9fff\u3400-\u4dbf\uf900-\ufaff])/g, '$1 $2');
+  }
+
+  // 4) 数字与单位间加空格
+  if (document.getElementById('opt-number-space').checked) {
+    // 常用单位（长度、重量、数据量、时间、百分比）
+    text = text.replace(/([0-9])([%％°℃℉])/g, '$1 $2');
+    text = text.replace(/([0-9])\s*(px|em|rem|vh|vw|cm|mm|in|pt|pc|kb|mb|gb|tb|kbps|mbps|gbps|gb|tb|khz|mhz|ghz|M|G|T|K|B)\b/gi, '$1 $2');
+    // 数字后接中文单位
+    text = text.replace(/([0-9]+)([个只条块张件名次把根片匹双对套封份台辆朵颗粒棵株根片匹双对套封])/g, '$1$2'); // 量词不加空格
+    text = text.replace(/([0-9]+)\s*(元|块|毛|分|年|月|日|时|分|秒|米|千米|公斤|斤|克|吨|升|毫升|平方米|平方|立方|度|瓦|伏|安|欧|赫|焦|牛|帕|卡)/g, '$1 $2');
+  }
+
+  // 5) 清理多余空格（中文标点前后）
+  text = text.replace(/\s+([，。！？、；：）】」』」])/g, '$1');
+  text = text.replace(/([（【「『「])\s+/g, '$1');
+
+  // 6) 多余空格合并
+  text = text.replace(/  +/g, ' ');
+
+  output.value = text;
+
+  // 统计
+  var newLen = text.length;
+  var change = newLen - origLen;
+  var newCn = (text.match(/[\u4e00-\u9fff\u3400-\u4dbf\uf900-\ufaff]/g) || []).length;
+  var newEn = (text.match(/[a-zA-Z]/g) || []).length;
+  var newNum = (text.match(/[0-9]/g) || []).length;
+
+  stats.innerHTML = '长度: ' + origLen + ' → ' + newLen + ' (' + (change >= 0 ? '+' : '') + change + ' 字符) ' +
+    '| 中文字符: ' + origCn + ' | 英文字母: ' + origEn + ' | 数字: ' + origNum +
+    '<div class="mt-1 text-gray-400">已自动格式化</div>';
+}
+
+function clearText() {
+  document.getElementById('input-text').value = '';
+  document.getElementById('output-text').value = '';
+  document.getElementById('stats').textContent = '';
+}
+
+// 自动格式化
+document.addEventListener('DOMContentLoaded', function() {
+  var input = document.getElementById('input-text');
+  input.addEventListener('input', formatText);
+  formatText();
+});
+</script>
