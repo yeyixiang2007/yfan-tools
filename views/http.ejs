@@ -1,0 +1,135 @@
+<%- /* content block for layout */ '' %>
+<% var content = ''; %>
+
+<div>
+  <div class="mb-6">
+    <a href="/" class="text-sm text-blue-500 hover:text-blue-700">&larr; 返回首页</a>
+  </div>
+
+  <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 md:p-8">
+    <div class="flex items-center gap-3 mb-4">
+      <span class="text-3xl"><%- tool.icon %></span>
+      <div>
+        <h1 class="text-2xl font-bold text-gray-800"><%- tool.name %></h1>
+        <p class="text-sm text-gray-500"><%- tool.desc %></p>
+      </div>
+    </div>
+
+    <div class="border-t border-gray-100 pt-6 mt-2">
+      <div class="mb-4">
+        <input id="http-search" type="text" class="w-full px-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" placeholder="搜索状态码或描述..." oninput="filterCodes()" autofocus>
+      </div>
+
+      <div class="flex flex-wrap gap-2 mb-4">
+        <button onclick="filterCategory('all')" class="px-3 py-1.5 bg-gray-800 text-white rounded-lg text-sm font-medium" id="cat-all">全部</button>
+        <button onclick="filterCategory('1xx')" class="px-3 py-1.5 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 text-sm" id="cat-1xx">1xx 信息</button>
+        <button onclick="filterCategory('2xx')" class="px-3 py-1.5 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 text-sm" id="cat-2xx">2xx 成功</button>
+        <button onclick="filterCategory('3xx')" class="px-3 py-1.5 bg-yellow-100 text-yellow-700 rounded-lg hover:bg-yellow-200 text-sm" id="cat-3xx">3xx 重定向</button>
+        <button onclick="filterCategory('4xx')" class="px-3 py-1.5 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 text-sm" id="cat-4xx">4xx 客户端错误</button>
+        <button onclick="filterCategory('5xx')" class="px-3 py-1.5 bg-orange-100 text-orange-700 rounded-lg hover:bg-orange-200 text-sm" id="cat-5xx">5xx 服务端错误</button>
+      </div>
+
+      <div id="http-list" class="space-y-1"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+const CODES = [
+  { code: 100, name: 'Continue', cat: '1xx', desc: '服务器已收到请求头，客户端应继续发送请求体' },
+  { code: 101, name: 'Switching Protocols', cat: '1xx', desc: '服务器已理解并同意切换协议' },
+  { code: 102, name: 'Processing', cat: '1xx', desc: '服务器已收到并正在处理请求，但无响应可用' },
+  { code: 200, name: 'OK', cat: '2xx', desc: '请求成功' },
+  { code: 201, name: 'Created', cat: '2xx', desc: '请求已被实现，新资源已创建' },
+  { code: 202, name: 'Accepted', cat: '2xx', desc: '请求已接受，但尚未处理完成' },
+  { code: 203, name: 'Non-Authoritative Information', cat: '2xx', desc: '返回的元信息来自副本而非原始服务器' },
+  { code: 204, name: 'No Content', cat: '2xx', desc: '服务器成功处理，但无内容返回' },
+  { code: 205, name: 'Reset Content', cat: '2xx', desc: '服务器处理成功，要求客户端重置文档视图' },
+  { code: 206, name: 'Partial Content', cat: '2xx', desc: '服务器成功处理了部分 GET 请求' },
+  { code: 300, name: 'Multiple Choices', cat: '3xx', desc: '请求有多个可能的响应，用户需选择' },
+  { code: 301, name: 'Moved Permanently', cat: '3xx', desc: '资源已永久移动到新 URL' },
+  { code: 302, name: 'Found', cat: '3xx', desc: '资源临时移动到新 URL' },
+  { code: 303, name: 'See Other', cat: '3xx', desc: '应使用 GET 方法到另一个 URI 获取响应' },
+  { code: 304, name: 'Not Modified', cat: '3xx', desc: '资源未修改，可使用缓存版本' },
+  { code: 307, name: 'Temporary Redirect', cat: '3xx', desc: '临时重定向，方法不变' },
+  { code: 308, name: 'Permanent Redirect', cat: '3xx', desc: '永久重定向，方法不变' },
+  { code: 400, name: 'Bad Request', cat: '4xx', desc: '服务器无法理解请求的语法' },
+  { code: 401, name: 'Unauthorized', cat: '4xx', desc: '请求要求身份验证' },
+  { code: 403, name: 'Forbidden', cat: '4xx', desc: '服务器已理解但拒绝执行请求' },
+  { code: 404, name: 'Not Found', cat: '4xx', desc: '服务器找不到请求的资源' },
+  { code: 405, name: 'Method Not Allowed', cat: '4xx', desc: '请求方法不被允许' },
+  { code: 406, name: 'Not Acceptable', cat: '4xx', desc: '服务器无法生成符合 Accept 头的响应' },
+  { code: 407, name: 'Proxy Authentication Required', cat: '4xx', desc: '需要通过代理进行身份验证' },
+  { code: 408, name: 'Request Timeout', cat: '4xx', desc: '服务器等待请求超时' },
+  { code: 409, name: 'Conflict', cat: '4xx', desc: '请求与当前服务器状态冲突' },
+  { code: 410, name: 'Gone', cat: '4xx', desc: '请求的资源已永久删除' },
+  { code: 411, name: 'Length Required', cat: '4xx', desc: '缺少 Content-Length 头' },
+  { code: 412, name: 'Precondition Failed', cat: '4xx', desc: '请求头中的前提条件失败' },
+  { code: 413, name: 'Payload Too Large', cat: '4xx', desc: '请求体过大' },
+  { code: 414, name: 'URI Too Long', cat: '4xx', desc: 'URI 过长' },
+  { code: 415, name: 'Unsupported Media Type', cat: '4xx', desc: '不支持的媒体类型' },
+  { code: 416, name: 'Range Not Satisfiable', cat: '4xx', desc: '请求的范围无效' },
+  { code: 417, name: 'Expectation Failed', cat: '4xx', desc: '服务器无法满足 Expect 请求头的要求' },
+  { code: 422, name: 'Unprocessable Entity', cat: '4xx', desc: '请求格式正确但语义错误' },
+  { code: 429, name: 'Too Many Requests', cat: '4xx', desc: '请求频率过高，已被限流' },
+  { code: 451, name: 'Unavailable For Legal Reasons', cat: '4xx', desc: '因法律原因不可用' },
+  { code: 500, name: 'Internal Server Error', cat: '5xx', desc: '服务器内部错误' },
+  { code: 501, name: 'Not Implemented', cat: '5xx', desc: '服务器不支持请求的功能' },
+  { code: 502, name: 'Bad Gateway', cat: '5xx', desc: '网关或代理收到无效响应' },
+  { code: 503, name: 'Service Unavailable', cat: '5xx', desc: '服务器暂时不可用（过载/维护）' },
+  { code: 504, name: 'Gateway Timeout', cat: '5xx', desc: '网关/代理等待上游响应超时' },
+  { code: 505, name: 'HTTP Version Not Supported', cat: '5xx', desc: '服务器不支持请求的 HTTP 版本' },
+  { code: 507, name: 'Insufficient Storage', cat: '5xx', desc: '服务器存储空间不足' },
+];
+
+function getBg(code) {
+  if (code < 200) return 'bg-blue-50 border-blue-200';
+  if (code < 300) return 'bg-green-50 border-green-200';
+  if (code < 400) return 'bg-yellow-50 border-yellow-200';
+  if (code < 500) return 'bg-red-50 border-red-200';
+  return 'bg-orange-50 border-orange-200';
+}
+
+function renderCodes(filterCat, search) {
+  const list = document.getElementById('http-list');
+  const filtered = CODES.filter(c => {
+    if (filterCat !== 'all' && c.cat !== filterCat) return false;
+    if (search) {
+      const q = search.toLowerCase();
+      return String(c.code).includes(q) || c.name.toLowerCase().includes(q) || c.desc.toLowerCase().includes(q);
+    }
+    return true;
+  });
+
+  list.innerHTML = filtered.map(c => `
+    <div class="p-3 rounded-lg border ${getBg(c.code)} flex items-center gap-3">
+      <span class="text-lg font-bold font-mono ${c.code < 200 ? 'text-blue-600' : c.code < 300 ? 'text-green-600' : c.code < 400 ? 'text-yellow-600' : c.code < 500 ? 'text-red-600' : 'text-orange-600'}">${c.code}</span>
+      <div class="flex-1">
+        <div class="font-medium text-gray-800 text-sm">${c.name}</div>
+        <div class="text-xs text-gray-500">${c.desc}</div>
+      </div>
+      <button onclick="copyCode(${c.code}, '${c.name}')" class="text-xs text-gray-400 hover:text-blue-500 shrink-0">📋</button>
+    </div>
+  `).join('');
+}
+
+function filterCategory(cat) {
+  document.querySelectorAll('[id^="cat-"]').forEach(el => {
+    el.className = el.id === 'cat-' + cat || (el.id === 'cat-all' && cat === 'all')
+      ? 'px-3 py-1.5 rounded-lg text-sm font-medium bg-gray-800 text-white'
+      : el.id === 'cat-all' ? 'px-3 py-1.5 rounded-lg text-sm bg-gray-800 text-white font-medium'
+      : `px-3 py-1.5 rounded-lg text-sm ${el.dataset.bg || 'bg-gray-100'} ${el.dataset.fg || 'text-gray-700'}`;
+  });
+  renderCodes(cat, document.getElementById('http-search').value);
+}
+
+function filterCodes() {
+  renderCodes(document.querySelector('[id^="cat-"].bg-gray-800')?.id?.replace('cat-','') || 'all', this.value);
+}
+
+function copyCode(code, name) {
+  navigator.clipboard.writeText(`${code} ${name}`);
+}
+
+renderCodes('all', '');
+</script>

@@ -1,0 +1,149 @@
+<%- /* content block for layout */ '' %>
+<% var content = ''; %>
+
+<div>
+  <div class="mb-6">
+    <a href="/" class="text-sm text-blue-500 hover:text-blue-700">&larr; 返回首页</a>
+  </div>
+
+  <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 md:p-8">
+    <div class="flex items-center gap-3 mb-4">
+      <span class="text-3xl"><%- tool.icon %></span>
+      <div>
+        <h1 class="text-2xl font-bold text-gray-800"><%- tool.name %></h1>
+        <p class="text-sm text-gray-500"><%- tool.desc %></p>
+      </div>
+    </div>
+
+    <div class="border-t border-gray-100 pt-6 mt-2">
+      <div class="flex flex-wrap gap-2 mb-4">
+        <input id="mime-search" type="text" class="flex-1 min-w-[200px] px-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" placeholder="搜索扩展名或 MIME 类型..." oninput="searchMime()" autofocus>
+      </div>
+
+      <div class="flex flex-wrap gap-2 mb-4 text-sm">
+        <button onclick="filterMime('all')" class="px-3 py-1.5 bg-gray-800 text-white rounded-lg font-medium" id="mime-all">全部</button>
+        <button onclick="filterMime('text')" class="px-3 py-1.5 bg-gray-100 rounded-lg hover:bg-gray-200" id="mime-text">📝 文本</button>
+        <button onclick="filterMime('image')" class="px-3 py-1.5 bg-gray-100 rounded-lg hover:bg-gray-200" id="mime-image">🖼️ 图片</button>
+        <button onclick="filterMime('audio')" class="px-3 py-1.5 bg-gray-100 rounded-lg hover:bg-gray-200" id="mime-audio">🎵 音频</button>
+        <button onclick="filterMime('video')" class="px-3 py-1.5 bg-gray-100 rounded-lg hover:bg-gray-200" id="mime-video">🎬 视频</button>
+        <button onclick="filterMime('application')" class="px-3 py-1.5 bg-gray-100 rounded-lg hover:bg-gray-200" id="mime-application">📦 应用</button>
+        <button onclick="filterMime('multipart')" class="px-3 py-1.5 bg-gray-100 rounded-lg hover:bg-gray-200" id="mime-multipart">📎 多部分</button>
+      </div>
+
+      <div id="mime-list" class="space-y-1 max-h-96 overflow-y-auto"></div>
+      <div id="mime-count" class="mt-2 text-xs text-gray-400"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+const TYPES = [
+  { ext: 'html', mime: 'text/html', cat: 'text', desc: 'HTML 文档' },
+  { ext: 'css', mime: 'text/css', cat: 'text', desc: 'CSS 样式表' },
+  { ext: 'js', mime: 'text/javascript', cat: 'text', desc: 'JavaScript 文件' },
+  { ext: 'json', mime: 'application/json', cat: 'application', desc: 'JSON 数据' },
+  { ext: 'xml', mime: 'application/xml', cat: 'application', desc: 'XML 文档' },
+  { ext: 'txt', mime: 'text/plain', cat: 'text', desc: '纯文本' },
+  { ext: 'csv', mime: 'text/csv', cat: 'text', desc: 'CSV 表格数据' },
+  { ext: 'md', mime: 'text/markdown', cat: 'text', desc: 'Markdown 文档' },
+  { ext: 'yaml', mime: 'application/x-yaml', cat: 'application', desc: 'YAML 文件' },
+  { ext: 'toml', mime: 'application/toml', cat: 'application', desc: 'TOML 配置文件' },
+  { ext: 'jpg', mime: 'image/jpeg', cat: 'image', desc: 'JPEG 图片' },
+  { ext: 'jpeg', mime: 'image/jpeg', cat: 'image', desc: 'JPEG 图片' },
+  { ext: 'png', mime: 'image/png', cat: 'image', desc: 'PNG 图片' },
+  { ext: 'gif', mime: 'image/gif', cat: 'image', desc: 'GIF 动图' },
+  { ext: 'webp', mime: 'image/webp', cat: 'image', desc: 'WebP 图片' },
+  { ext: 'svg', mime: 'image/svg+xml', cat: 'image', desc: 'SVG 矢量图' },
+  { ext: 'ico', mime: 'image/vnd.microsoft.icon', cat: 'image', desc: '图标文件' },
+  { ext: 'bmp', mime: 'image/bmp', cat: 'image', desc: 'BMP 位图' },
+  { ext: 'avif', mime: 'image/avif', cat: 'image', desc: 'AVIF 图片' },
+  { ext: 'mp3', mime: 'audio/mpeg', cat: 'audio', desc: 'MP3 音频' },
+  { ext: 'wav', mime: 'audio/wav', cat: 'audio', desc: 'WAV 音频' },
+  { ext: 'ogg', mime: 'audio/ogg', cat: 'audio', desc: 'OGG 音频' },
+  { ext: 'flac', mime: 'audio/flac', cat: 'audio', desc: 'FLAC 无损音频' },
+  { ext: 'aac', mime: 'audio/aac', cat: 'audio', desc: 'AAC 音频' },
+  { ext: 'm4a', mime: 'audio/mp4', cat: 'audio', desc: 'M4A 音频' },
+  { ext: 'mp4', mime: 'video/mp4', cat: 'video', desc: 'MP4 视频' },
+  { ext: 'webm', mime: 'video/webm', cat: 'video', desc: 'WebM 视频' },
+  { ext: 'avi', mime: 'video/x-msvideo', cat: 'video', desc: 'AVI 视频' },
+  { ext: 'mov', mime: 'video/quicktime', cat: 'video', desc: 'QuickTime 视频' },
+  { ext: 'wmv', mime: 'video/x-ms-wmv', cat: 'video', desc: 'WMV 视频' },
+  { ext: 'flv', mime: 'video/x-flv', cat: 'video', desc: 'Flash 视频' },
+  { ext: 'mkv', mime: 'video/x-matroska', cat: 'video', desc: 'Matroska 视频' },
+  { ext: 'pdf', mime: 'application/pdf', cat: 'application', desc: 'PDF 文档' },
+  { ext: 'doc', mime: 'application/msword', cat: 'application', desc: 'Word 文档' },
+  { ext: 'docx', mime: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', cat: 'application', desc: 'Word OpenXML 文档' },
+  { ext: 'xls', mime: 'application/vnd.ms-excel', cat: 'application', desc: 'Excel 表格' },
+  { ext: 'xlsx', mime: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', cat: 'application', desc: 'Excel OpenXML 表格' },
+  { ext: 'ppt', mime: 'application/vnd.ms-powerpoint', cat: 'application', desc: 'PowerPoint 演示' },
+  { ext: 'pptx', mime: 'application/vnd.openxmlformats-officedocument.presentationml.presentation', cat: 'application', desc: 'PowerPoint OpenXML' },
+  { ext: 'zip', mime: 'application/zip', cat: 'application', desc: 'ZIP 压缩包' },
+  { ext: 'rar', mime: 'application/vnd.rar', cat: 'application', desc: 'RAR 压缩包' },
+  { ext: '7z', mime: 'application/x-7z-compressed', cat: 'application', desc: '7z 压缩包' },
+  { ext: 'tar', mime: 'application/x-tar', cat: 'application', desc: 'TAR 归档' },
+  { ext: 'gz', mime: 'application/gzip', cat: 'application', desc: 'GZip 压缩' },
+  { ext: 'exe', mime: 'application/x-msdownload', cat: 'application', desc: '可执行文件' },
+  { ext: 'dll', mime: 'application/x-msdownload', cat: 'application', desc: '动态链接库' },
+  { ext: 'apk', mime: 'application/vnd.android.package-archive', cat: 'application', desc: 'Android 安装包' },
+  { ext: 'ipa', mime: 'application/octet-stream', cat: 'application', desc: 'iOS 安装包' },
+  { ext: 'ttf', mime: 'font/ttf', cat: 'application', desc: 'TrueType 字体' },
+  { ext: 'otf', mime: 'font/otf', cat: 'application', desc: 'OpenType 字体' },
+  { ext: 'woff', mime: 'font/woff', cat: 'application', desc: 'WOFF 字体' },
+  { ext: 'woff2', mime: 'font/woff2', cat: 'application', desc: 'WOFF2 字体' },
+  { ext: 'wasm', mime: 'application/wasm', cat: 'application', desc: 'WebAssembly 模块' },
+  { ext: 'bin', mime: 'application/octet-stream', cat: 'application', desc: '二进制文件' },
+  { ext: 'iso', mime: 'application/x-iso9660-image', cat: 'application', desc: '光盘镜像' },
+  { ext: 'sh', mime: 'application/x-sh', cat: 'application', desc: 'Shell 脚本' },
+  { ext: 'py', mime: 'text/x-python', cat: 'text', desc: 'Python 源码' },
+  { ext: 'java', mime: 'text/x-java', cat: 'text', desc: 'Java 源码' },
+  { ext: 'go', mime: 'text/x-go', cat: 'text', desc: 'Go 源码' },
+  { ext: 'rs', mime: 'text/x-rust', cat: 'text', desc: 'Rust 源码' },
+  { ext: 'c', mime: 'text/x-c', cat: 'text', desc: 'C 源码' },
+  { ext: 'cpp', mime: 'text/x-c++', cat: 'text', desc: 'C++ 源码' },
+  { ext: 'ts', mime: 'text/typescript', cat: 'text', desc: 'TypeScript 源码' },
+];
+
+function renderMime(cat, search) {
+  const list = document.getElementById('mime-list');
+  const filtered = TYPES.filter(t => {
+    if (cat !== 'all' && t.cat !== cat) return false;
+    if (search) {
+      const q = search.toLowerCase();
+      return t.ext.toLowerCase().includes(q) || t.mime.toLowerCase().includes(q) || t.desc.toLowerCase().includes(q);
+    }
+    return true;
+  });
+
+  list.innerHTML = filtered.map(t => `
+    <div class="flex items-center gap-2 p-2 rounded hover:bg-gray-50 text-sm" onclick="copyMime('${t.mime}')">
+      <span class="font-mono text-blue-600 w-16 shrink-0">.${t.ext}</span>
+      <span class="font-mono text-gray-600 w-52 shrink-0">${t.mime}</span>
+      <span class="text-gray-400 text-xs">${t.desc}</span>
+      <span class="ml-auto text-xs text-gray-300">📋</span>
+    </div>
+  `).join('');
+
+  document.getElementById('mime-count').textContent = `共 ${filtered.length} 条`;
+}
+
+function filterMime(cat) {
+  document.querySelectorAll('[id^="mime-"]').forEach(el => {
+    el.className = el.id === 'mime-' + cat || (el.id === 'mime-all' && cat === 'all')
+      ? 'px-3 py-1.5 rounded-lg font-medium bg-gray-800 text-white text-sm'
+      : 'px-3 py-1.5 rounded-lg bg-gray-100 hover:bg-gray-200 text-sm';
+  });
+  renderMime(cat, document.getElementById('mime-search').value);
+}
+
+function searchMime() {
+  const active = document.querySelector('[id^="mime-"].bg-gray-800');
+  const cat = active ? active.id.replace('mime-', '') : 'all';
+  renderMime(cat, this.value);
+}
+
+function copyMime(mime) {
+  navigator.clipboard.writeText(mime);
+}
+
+renderMime('all', '');
+</script>

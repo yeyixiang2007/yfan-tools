@@ -1,0 +1,215 @@
+<%- /* content block for layout */ '' %>
+<% var content = ''; %>
+
+<div>
+  <div class="mb-6">
+    <a href="/" class="text-sm text-blue-500 hover:text-blue-700">&larr; 返回首页</a>
+  </div>
+
+  <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 md:p-8">
+    <div class="flex items-center gap-3 mb-4">
+      <span class="text-3xl"><%- tool.icon %></span>
+      <div>
+        <h1 class="text-2xl font-bold text-gray-800"><%- tool.name %></h1>
+        <p class="text-sm text-gray-500"><%- tool.desc %></p>
+      </div>
+    </div>
+
+    <div class="border-t border-gray-100 pt-6 mt-2">
+      <div class="flex flex-wrap gap-2 mb-4">
+        <button onclick="formatCSV()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium">📊 格式化</button>
+        <button onclick="csvToJson()" class="px-4 py-2 bg-gray-800 text-white rounded-lg hover:bg-gray-900 text-sm font-medium">CSV → JSON</button>
+        <button onclick="jsonToCsv()" class="px-4 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-800 text-sm font-medium">JSON → CSV</button>
+        <button onclick="sortTable('asc')" class="px-3 py-2 bg-white border border-gray-300 text-gray-600 rounded-lg hover:bg-gray-50 text-sm">↑ 排序</button>
+        <button onclick="sortTable('desc')" class="px-3 py-2 bg-white border border-gray-300 text-gray-600 rounded-lg hover:bg-gray-50 text-sm">↓ 排序</button>
+        <button onclick="copyResult()" class="px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 text-sm font-medium">📋 复制</button>
+        <button onclick="clearAll()" class="px-4 py-2 bg-white border border-gray-300 text-gray-500 rounded-lg hover:bg-gray-50 text-sm font-medium">清空</button>
+      </div>
+
+      <div class="grid grid-cols-1 gap-4 mb-4">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">CSV 数据</label>
+          <textarea id="csv-input" rows="8" class="w-full border border-gray-300 rounded-lg p-3 font-mono text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" spellcheck="false">name,age,city,occupation
+张三,28,北京,工程师
+李四,35,上海,设计师
+王五,42,深圳,产品经理
+赵六,26,杭州,数据分析</textarea>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-4 mb-4 text-sm">
+        <div>
+          <label class="text-gray-600 mr-1">分隔符:</label>
+          <select id="csv-delimiter" onchange="formatCSV()" class="border border-gray-300 rounded px-2 py-1">
+            <option value=",">, (逗号)</option>
+            <option value=";">; (分号)</option>
+            <option value="\t">\t (Tab)</option>
+            <option value="|">| (管道)</option>
+          </select>
+        </div>
+        <label class="flex items-center gap-1 text-gray-600">
+          <input type="checkbox" id="csv-header" checked onchange="formatCSV()"> 首行为表头
+        </label>
+      </div>
+
+      <div id="csv-preview" class="hidden overflow-x-auto">
+        <table id="csv-table" class="w-full text-xs font-mono border-collapse"></table>
+        <div class="mt-2 p-3 bg-gray-50 rounded-lg">
+          <div id="csv-stats" class="text-xs text-gray-500"></div>
+        </div>
+      </div>
+
+      <div id="csv-output-section" class="hidden mt-4">
+        <label class="block text-sm font-medium text-gray-700 mb-1">输出文本</label>
+        <textarea id="csv-output" rows="8" class="w-full border border-gray-300 rounded-lg p-3 font-mono text-sm bg-gray-50 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" readonly></textarea>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+function parseCSV(text, delimiter, hasHeader) {
+  const delim = delimiter === '\t' ? '\t' : delimiter;
+  const lines = text.split('\n').map(l => l.trim()).filter(l => l);
+  if (lines.length === 0) return { headers: [], rows: [] };
+
+  const parseLine = (line) => {
+    const result = [];
+    let current = '';
+    let inQuotes = false;
+    for (let i = 0; i < line.length; i++) {
+      const ch = line[i];
+      if (ch === '"') { inQuotes = !inQuotes; continue; }
+      if (ch === delim && !inQuotes) { result.push(current.trim()); current = ''; continue; }
+      current += ch;
+    }
+    result.push(current.trim());
+    return result;
+  };
+
+  let headers = [];
+  let rows = [];
+  let start = 0;
+
+  if (hasHeader) {
+    headers = parseLine(lines[0]);
+    start = 1;
+  } else {
+    headers = parseLine(lines[0]).map((_, i) => `列 ${i + 1}`);
+  }
+
+  for (let i = start; i < lines.length; i++) {
+    const vals = parseLine(lines[i]);
+    const row = {};
+    for (let j = 0; j < Math.max(headers.length, vals.length); j++) {
+      row[headers[j] || `列 ${j + 1}`] = vals[j] || '';
+    }
+    rows.push(row);
+  }
+
+  return { headers, rows };
+}
+
+function formatCSV() {
+  const text = document.getElementById('csv-input').value;
+  const delimiter = document.getElementById('csv-delimiter').value;
+  const hasHeader = document.getElementById('csv-header').checked;
+
+  const { headers, rows } = parseCSV(text, delimiter, hasHeader);
+  if (rows.length === 0) return;
+
+  const preview = document.getElementById('csv-preview');
+  preview.classList.remove('hidden');
+
+  // Build table
+  let html = '<thead><tr>';
+  for (const h of headers) {
+    html += `<th class="border border-gray-300 bg-gray-100 px-3 py-2 text-left font-semibold text-gray-700">${escapeHtml(h)}</th>`;
+  }
+  html += '</tr></thead><tbody>';
+  for (const row of rows.slice(0, 100)) {
+    html += '<tr>';
+    for (const h of headers) {
+      html += `<td class="border border-gray-200 px-3 py-1.5 text-gray-600">${escapeHtml(row[h] || '')}</td>`;
+    }
+    html += '</tr>';
+  }
+  if (rows.length > 100) html += `<tr><td colspan="${headers.length}" class="border px-3 py-2 text-gray-400 text-center">... 仅显示前 100 行</td></tr>`;
+  html += '</tbody>';
+  document.getElementById('csv-table').innerHTML = html;
+
+  document.getElementById('csv-stats').textContent = `共 ${rows.length} 行 × ${headers.length} 列`;
+}
+
+function csvToJson() {
+  const text = document.getElementById('csv-input').value;
+  const delimiter = document.getElementById('csv-delimiter').value;
+  const { headers, rows } = parseCSV(text, delimiter, true);
+
+  document.getElementById('csv-output-section').classList.remove('hidden');
+  document.getElementById('csv-output').value = JSON.stringify(rows, null, 2);
+}
+
+function jsonToCsv() {
+  try {
+    const data = JSON.parse(document.getElementById('csv-input').value);
+    if (!Array.isArray(data) || data.length === 0) throw new Error('需要 JSON 数组');
+
+    const headers = Object.keys(data[0]);
+    const csv = [headers.join(',')];
+    for (const row of data) {
+      csv.push(headers.map(h => {
+        const v = String(row[h] || '');
+        return v.includes(',') || v.includes('"') ? `"${v.replace(/"/g, '""')}"` : v;
+      }).join(','));
+    }
+
+    document.getElementById('csv-output-section').classList.remove('hidden');
+    document.getElementById('csv-output').value = csv.join('\n');
+  } catch (e) {
+    alert('JSON 解析失败: ' + e.message);
+  }
+}
+
+function escapeHtml(s) { return String(s).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[m]); }
+
+let sortAsc = true;
+function sortTable(dir) {
+  sortAsc = dir === 'asc';
+  // Re-parse and re-render sorted
+  const text = document.getElementById('csv-input').value;
+  const delimiter = document.getElementById('csv-delimiter').value;
+  const hasHeader = document.getElementById('csv-header').checked;
+  const { headers, rows } = parseCSV(text, delimiter, hasHeader);
+  const sorted = sortAsc ? rows : [...rows].reverse();
+
+  let html = '<thead><tr>';
+  for (const h of headers) html += `<th class="border border-gray-300 bg-gray-100 px-3 py-2 text-left font-semibold text-gray-700">${escapeHtml(h)}</th>`;
+  html += '</tr></thead><tbody>';
+  for (const row of sorted.slice(0, 100)) {
+    html += '<tr>';
+    for (const h of headers) html += `<td class="border border-gray-200 px-3 py-1.5 text-gray-600">${escapeHtml(row[h] || '')}</td>`;
+    html += '</tr>';
+  }
+  html += '</tbody>';
+  document.getElementById('csv-table').innerHTML = html;
+}
+
+function copyResult() {
+  const text = document.getElementById('csv-output').value;
+  if (!text) return;
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = document.querySelector('[onclick="copyResult()"]');
+    btn.textContent = '✅ 已复制';
+    setTimeout(() => btn.textContent = '📋 复制', 1500);
+  });
+}
+
+function clearAll() {
+  document.getElementById('csv-input').value = '';
+  document.getElementById('csv-preview').classList.add('hidden');
+  document.getElementById('csv-output-section').classList.add('hidden');
+}
+
+formatCSV();
+</script>

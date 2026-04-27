@@ -1,0 +1,268 @@
+<%- /* content block for layout */ '' %>
+<% var content = ''; %>
+
+<div>
+  <div class="mb-6">
+    <a href="/" class="text-sm text-blue-500 hover:text-blue-700">&larr; 返回首页</a>
+  </div>
+
+  <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 md:p-8">
+    <div class="flex items-center gap-3 mb-4">
+      <span class="text-3xl"><%- tool.icon %></span>
+      <div>
+        <h1 class="text-2xl font-bold text-gray-800"><%- tool.name %></h1>
+        <p class="text-sm text-gray-500"><%- tool.desc %></p>
+      </div>
+    </div>
+
+    <div class="border-t border-gray-100 pt-6 mt-2">
+      <div class="flex flex-wrap gap-2 mb-4">
+        <button onclick="clearAll()" class="px-4 py-2 bg-white border border-gray-300 text-gray-500 rounded-lg hover:bg-gray-50 text-sm font-medium">清空</button>
+      </div>
+
+      <div class="flex flex-wrap gap-4 mb-4">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-2">选择单位类别</label>
+          <select id="unit-category" onchange="switchCategory()" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
+            <option value="length">📏 长度</option>
+            <option value="weight">⚖️ 重量</option>
+            <option value="temperature">🌡️ 温度</option>
+            <option value="volume">🧪 体积</option>
+            <option value="area">📐 面积</option>
+            <option value="speed">🚀 速度</option>
+            <option value="data">💾 数据存储</option>
+            <option value="time">⏱️ 时间</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">值</label>
+          <input id="unit-value" type="number" value="1" step="any" oninput="convert()" class="w-full px-4 py-2 border border-gray-300 rounded-lg text-lg font-mono focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none">
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">从</label>
+          <select id="unit-from" onchange="convert()" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"></select>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">到</label>
+          <select id="unit-to" onchange="convert()" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"></select>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">结果</label>
+          <input id="unit-result" type="text" readonly class="w-full px-4 py-2 border border-gray-300 rounded-lg text-lg font-mono bg-gray-50 text-green-700 font-bold">
+        </div>
+      </div>
+
+      <div class="mt-4 p-4 bg-gray-50 rounded-lg">
+        <h3 class="text-sm font-medium text-gray-700 mb-2">📊 常用换算表</h3>
+        <div id="conversion-table" class="text-xs font-mono space-y-1"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const UNITS = {
+  length: {
+    base: 'm',
+    units: [
+      { id: 'mm', name: '毫米 (mm)', toBase: v => v / 1000 },
+      { id: 'cm', name: '厘米 (cm)', toBase: v => v / 100 },
+      { id: 'dm', name: '分米 (dm)', toBase: v => v / 10 },
+      { id: 'm', name: '米 (m)', toBase: v => v },
+      { id: 'km', name: '千米 (km)', toBase: v => v * 1000 },
+      { id: 'in', name: '英寸 (in)', toBase: v => v * 0.0254 },
+      { id: 'ft', name: '英尺 (ft)', toBase: v => v * 0.3048 },
+      { id: 'yd', name: '码 (yd)', toBase: v => v * 0.9144 },
+      { id: 'mi', name: '英里 (mi)', toBase: v => v * 1609.344 },
+      { id: 'nmi', name: '海里 (nmi)', toBase: v => v * 1852 },
+    ]
+  },
+  weight: {
+    base: 'kg',
+    units: [
+      { id: 'mg', name: '毫克 (mg)', toBase: v => v / 1e6 },
+      { id: 'g', name: '克 (g)', toBase: v => v / 1000 },
+      { id: 'kg', name: '千克 (kg)', toBase: v => v },
+      { id: 't', name: '吨 (t)', toBase: v => v * 1000 },
+      { id: 'oz', name: '盎司 (oz)', toBase: v => v * 0.0283495 },
+      { id: 'lb', name: '磅 (lb)', toBase: v => v * 0.453592 },
+      { id: 'st', name: '英石 (st)', toBase: v => v * 6.35029 },
+    ]
+  },
+  temperature: {
+    base: 'C',
+    units: [
+      { id: 'C', name: '摄氏度 (°C)', toBase: v => v, fromBase: v => v },
+      { id: 'F', name: '华氏度 (°F)', toBase: v => (v - 32) * 5/9, fromBase: v => v * 9/5 + 32 },
+      { id: 'K', name: '开尔文 (K)', toBase: v => v - 273.15, fromBase: v => v + 273.15 },
+    ]
+  },
+  volume: {
+    base: 'L',
+    units: [
+      { id: 'mL', name: '毫升 (mL)', toBase: v => v / 1000 },
+      { id: 'L', name: '升 (L)', toBase: v => v },
+      { id: 'gal', name: '加仑 (gal)', toBase: v => v * 3.78541 },
+      { id: 'qt', name: '夸脱 (qt)', toBase: v => v * 0.946353 },
+      { id: 'pt', name: '品脱 (pt)', toBase: v => v * 0.473176 },
+      { id: 'cup', name: '杯 (cup)', toBase: v => v * 0.236588 },
+      { id: 'floz', name: '液量盎司 (fl oz)', toBase: v => v * 0.0295735 },
+      { id: 'tbsp', name: '汤匙 (tbsp)', toBase: v => v * 0.0147868 },
+      { id: 'tsp', name: '茶匙 (tsp)', toBase: v => v * 0.00492892 },
+      { id: 'm3', name: '立方米 (m³)', toBase: v => v * 1000 },
+    ]
+  },
+  area: {
+    base: 'm2',
+    units: [
+      { id: 'mm2', name: '平方毫米 (mm²)', toBase: v => v / 1e6 },
+      { id: 'cm2', name: '平方厘米 (cm²)', toBase: v => v / 10000 },
+      { id: 'm2', name: '平方米 (m²)', toBase: v => v },
+      { id: 'ha', name: '公顷 (ha)', toBase: v => v * 10000 },
+      { id: 'km2', name: '平方千米 (km²)', toBase: v => v * 1e6 },
+      { id: 'in2', name: '平方英寸 (in²)', toBase: v => v * 0.00064516 },
+      { id: 'ft2', name: '平方英尺 (ft²)', toBase: v => v * 0.092903 },
+      { id: 'ac', name: '英亩 (ac)', toBase: v => v * 4046.86 },
+    ]
+  },
+  speed: {
+    base: 'm/s',
+    units: [
+      { id: 'm/s', name: '米/秒 (m/s)', toBase: v => v },
+      { id: 'km/h', name: '千米/时 (km/h)', toBase: v => v / 3.6 },
+      { id: 'mph', name: '英里/时 (mph)', toBase: v => v * 0.44704 },
+      { id: 'knot', name: '节 (kn)', toBase: v => v * 0.514444 },
+      { id: 'ft/s', name: '英尺/秒 (ft/s)', toBase: v => v * 0.3048 },
+      { id: 'c', name: '光速 (c)', toBase: v => v * 299792458 },
+      { id: 'mach', name: '马赫 (Mach)', toBase: v => v * 343 },
+    ]
+  },
+  data: {
+    base: 'B',
+    units: [
+      { id: 'b', name: '比特 (bit)', toBase: v => v / 8 },
+      { id: 'B', name: '字节 (B)', toBase: v => v },
+      { id: 'KB', name: '千字节 (KB)', toBase: v => v * 1024 },
+      { id: 'MB', name: '兆字节 (MB)', toBase: v => v * 1024 * 1024 },
+      { id: 'GB', name: '吉字节 (GB)', toBase: v => v * 1024 * 1024 * 1024 },
+      { id: 'TB', name: '太字节 (TB)', toBase: v => v * 1024 * 1024 * 1024 * 1024 },
+      { id: 'PB', name: '拍字节 (PB)', toBase: v => v * 1024 * 1024 * 1024 * 1024 * 1024 },
+      { id: 'Kb', name: '千比特 (Kb)', toBase: v => v * 128 },
+      { id: 'Mb', name: '兆比特 (Mb)', toBase: v => v * 128 * 1024 },
+      { id: 'Gb', name: '吉比特 (Gb)', toBase: v => v * 128 * 1024 * 1024 },
+    ]
+  },
+  time: {
+    base: 's',
+    units: [
+      { id: 'ms', name: '毫秒 (ms)', toBase: v => v / 1000 },
+      { id: 's', name: '秒 (s)', toBase: v => v },
+      { id: 'min', name: '分钟 (min)', toBase: v => v * 60 },
+      { id: 'h', name: '小时 (h)', toBase: v => v * 3600 },
+      { id: 'd', name: '天 (d)', toBase: v => v * 86400 },
+      { id: 'wk', name: '周 (wk)', toBase: v => v * 604800 },
+      { id: 'mo', name: '月 (30天)', toBase: v => v * 2592000 },
+      { id: 'yr', name: '年 (365天)', toBase: v => v * 31536000 },
+    ]
+  }
+};
+
+function switchCategory() {
+  const cat = document.getElementById('unit-category').value;
+  const data = UNITS[cat];
+  const fromSelect = document.getElementById('unit-from');
+  const toSelect = document.getElementById('unit-to');
+
+  fromSelect.innerHTML = data.units.map(u => `<option value="${u.id}">${u.name}</option>`).join('');
+  toSelect.innerHTML = data.units.map(u => `<option value="${u.id}">${u.name}</option>`).join('');
+
+  // Set sensible defaults
+  if (data.units.length > 1) {
+    toSelect.value = data.units[1].id;
+  }
+
+  convert();
+  showConversionTable();
+}
+
+function convert() {
+  const cat = document.getElementById('unit-category').value;
+  const data = UNITS[cat];
+  const val = parseFloat(document.getElementById('unit-value').value) || 0;
+  const fromId = document.getElementById('unit-from').value;
+  const toId = document.getElementById('unit-to').value;
+
+  const fromUnit = data.units.find(u => u.id === fromId);
+  const toUnit = data.units.find(u => u.id === toId);
+
+  if (!fromUnit || !toUnit) return;
+
+  // Convert "from" to base
+  let baseVal = fromUnit.toBase ? fromUnit.toBase(val) : val;
+  // For temperature, fromBase and toBase are special
+  if (cat === 'temperature') {
+    const fromUnitT = data.units.find(u => u.id === fromId);
+    const toUnitT = data.units.find(u => u.id === toId);
+    // Convert from source to C, then C to target
+    baseVal = fromUnitT.toBase(val);
+    const result = toUnitT.fromBase ? toUnitT.fromBase(baseVal) : baseVal;
+    document.getElementById('unit-result').value = formatNum(result) + ' ' + toUnit.name.replace(/^[^)]+\)\s*/, '');
+    return;
+  }
+
+  // For other units: convert from base to target
+  const result = toUnit.toBase ? val * (1 / toUnit.toBase(1)) * fromUnit.toBase(1) : val;
+
+  // Actually: simpler approach
+  // val [fromUnit] -> base -> [toUnit]
+  const basePerUnit = fromUnit.toBase(1);
+  const toPerBase = 1 / toUnit.toBase(1);
+  const finalVal = val * basePerUnit * toPerBase;
+
+  document.getElementById('unit-result').value = formatNum(finalVal) + ' ' + toUnit.name.replace(/^[^)]+\)\s*/, '');
+}
+
+function formatNum(n) {
+  if (Math.abs(n) >= 1e12 || Math.abs(n) <= 1e-8) return n.toExponential(4);
+  if (Number.isInteger(n) && Math.abs(n) < 1e15) return n.toString();
+  return parseFloat(n.toFixed(8)).toString();
+}
+
+function showConversionTable() {
+  const cat = document.getElementById('unit-category').value;
+  const data = UNITS[cat];
+  const val = parseFloat(document.getElementById('unit-value').value) || 1;
+  const fromId = document.getElementById('unit-from').value;
+  const fromUnit = data.units.find(u => u.id === fromId);
+  if (!fromUnit) return;
+
+  const basePerUnit = fromUnit.toBase(1);
+
+  const table = document.getElementById('conversion-table');
+
+  if (cat === 'temperature') {
+    // Special handling for temperature
+    const baseVal = fromUnit.toBase(val);
+    table.innerHTML = data.units.filter(u => u.id !== fromId).map(u => {
+      const result = u.fromBase ? u.fromBase(baseVal) : baseVal;
+      return `<div class="flex gap-2"><span class="text-gray-400 w-32">${u.name}:</span><span class="font-medium">${formatNum(result)}</span></div>`;
+    }).join('');
+    return;
+  }
+
+  table.innerHTML = data.units.filter(u => u.id !== fromId).map(u => {
+    const result = val * basePerUnit * (1 / u.toBase(1));
+    return `<div class="flex gap-2"><span class="text-gray-400 w-32">${u.name}:</span><span class="font-medium">${formatNum(result)}</span></div>`;
+  }).join('');
+}
+
+function clearAll() {
+  document.getElementById('unit-value').value = '1';
+  switchCategory();
+}
+
+switchCategory();
+</script>

@@ -1,0 +1,166 @@
+<%- /* content block for layout */ '' %>
+<% var content = ''; %>
+
+<div>
+  <div class="mb-6">
+    <a href="/" class="text-sm text-blue-500 hover:text-blue-700">&larr; 返回首页</a>
+  </div>
+
+  <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 md:p-8">
+    <div class="flex items-center gap-3 mb-4">
+      <span class="text-3xl"><%- tool.icon %></span>
+      <div>
+        <h1 class="text-2xl font-bold text-gray-800"><%- tool.name %></h1>
+        <p class="text-sm text-gray-500"><%- tool.desc %></p>
+      </div>
+    </div>
+
+    <div class="border-t border-gray-100 pt-6 mt-2">
+      <div class="flex flex-wrap gap-2 mb-4">
+        <button onclick="countWords()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium">📊 统计</button>
+        <button onclick="showTopWords()" class="px-4 py-2 bg-gray-800 text-white rounded-lg hover:bg-gray-900 text-sm font-medium">🏆 词频 TOP 30</button>
+        <button onclick="copyResult()" class="px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 text-sm font-medium">📋 复制</button>
+        <button onclick="clearAll()" class="px-4 py-2 bg-white border border-gray-300 text-gray-500 rounded-lg hover:bg-gray-50 text-sm font-medium">清空</button>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">文本</label>
+          <textarea id="wc-input" rows="10" class="w-full border border-gray-300 rounded-lg p-3 font-mono text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" spellcheck="false">To be, or not to be, that is the question:
+Whether 'tis nobler in the mind to suffer
+The slings and arrows of outrageous fortune,
+Or to take arms against a sea of troubles
+And by opposing end them.</textarea>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">统计概览</label>
+          <div id="wc-stats" class="p-4 bg-gray-50 rounded-lg border border-gray-200 min-h-[200px]">
+            <div class="text-sm text-gray-400">点击「统计」查看</div>
+          </div>
+        </div>
+      </div>
+
+      <div id="wc-topwords" class="hidden mt-4">
+        <h3 class="text-sm font-semibold text-gray-700 mb-2">🏆 词频排行榜</h3>
+        <div id="wc-wordlist" class="max-h-64 overflow-y-auto space-y-1"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+function countWords() {
+  const text = document.getElementById('wc-input').value;
+  const stats = document.getElementById('wc-stats');
+
+  // Basic counts
+  const charCount = text.length;
+  const charNoSpace = text.replace(/\s/g, '').length;
+  const lineCount = text ? text.split('\n').length : 0;
+
+  // Word count
+  const words = text.match(/\b\w+\b/g) || [];
+  const wordCount = words.length;
+
+  // Chinese char count
+  const cnChars = text.match(/[\u4e00-\u9fff]/g);
+  const cnCount = cnChars ? cnChars.length : 0;
+
+  // Sentence count
+  const sentences = text.match(/[^.!?\n]+[.!?](\s|$)/g);
+  const sentenceCount = sentences ? sentences.length : text.split('\n').filter(l => l.trim()).length;
+
+  // Unique words
+  const uniqueWords = new Set(words.map(w => w.toLowerCase()));
+  const uniqueCount = uniqueWords.size;
+
+  stats.innerHTML = `
+    <div class="space-y-2 text-sm">
+      <div class="grid grid-cols-2 gap-2">
+        <div class="p-2 bg-white rounded flex justify-between">
+          <span class="text-gray-500">字符数</span>
+          <span class="font-bold text-blue-600">${charCount.toLocaleString()}</span>
+        </div>
+        <div class="p-2 bg-white rounded flex justify-between">
+          <span class="text-gray-500">无空格字符</span>
+          <span class="font-bold text-blue-600">${charNoSpace.toLocaleString()}</span>
+        </div>
+        <div class="p-2 bg-white rounded flex justify-between">
+          <span class="text-gray-500">单词数</span>
+          <span class="font-bold text-green-600">${wordCount.toLocaleString()}</span>
+        </div>
+        <div class="p-2 bg-white rounded flex justify-between">
+          <span class="text-gray-500">中文字数</span>
+          <span class="font-bold text-green-600">${cnCount.toLocaleString()}</span>
+        </div>
+        <div class="p-2 bg-white rounded flex justify-between">
+          <span class="text-gray-500">行数</span>
+          <span class="font-bold text-purple-600">${lineCount.toLocaleString()}</span>
+        </div>
+        <div class="p-2 bg-white rounded flex justify-between">
+          <span class="text-gray-500">句数</span>
+          <span class="font-bold text-purple-600">${sentenceCount.toLocaleString()}</span>
+        </div>
+        <div class="p-2 bg-white rounded flex justify-between">
+          <span class="text-gray-500">唯一单词</span>
+          <span class="font-bold text-orange-600">${uniqueCount.toLocaleString()}</span>
+        </div>
+        <div class="p-2 bg-white rounded flex justify-between">
+          <span class="text-gray-500">平均词长</span>
+          <span class="font-bold text-orange-600">${wordCount ? (charNoSpace / wordCount).toFixed(2) : 0}</span>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function showTopWords() {
+  const text = document.getElementById('wc-input').value;
+  const words = text.toLowerCase().match(/\b[a-z\u4e00-\u9fff']+\b/g) || [];
+
+  const freq = {};
+  for (const w of words) {
+    freq[w] = (freq[w] || 0) + 1;
+  }
+
+  const sorted = Object.entries(freq)
+    .filter(([w]) => w.length > 1 || w === 'i' || w === 'a')
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 30);
+
+  const container = document.getElementById('wc-topwords');
+  container.classList.remove('hidden');
+
+  const maxFreq = sorted.length > 0 ? sorted[0][1] : 1;
+  const list = document.getElementById('wc-wordlist');
+
+  list.innerHTML = sorted.map(([word, count], i) => {
+    const pct = (count / maxFreq * 100).toFixed(0);
+    const barColor = i < 5 ? 'bg-blue-500' : i < 10 ? 'bg-blue-400' : i < 20 ? 'bg-blue-300' : 'bg-blue-200';
+    return `
+      <div class="flex items-center gap-2">
+        <span class="text-xs text-gray-400 w-5 text-right">${i + 1}</span>
+        <span class="font-mono text-sm w-36 truncate">${escapeHtml(word)}</span>
+        <span class="text-xs text-gray-500 w-10">${count}</span>
+        <div class="flex-1 h-4 bg-gray-100 rounded-full overflow-hidden">
+          <div class="h-full ${barColor} rounded-full" style="width:${pct}%"></div>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function copyResult() {
+  const text = document.getElementById('wc-wordlist')?.textContent;
+  if (!text) { alert('请先点击「词频 TOP 30」'); return; }
+  navigator.clipboard.writeText(text);
+}
+
+function clearAll() {
+  document.getElementById('wc-input').value = '';
+  document.getElementById('wc-stats').innerHTML = '<div class="text-sm text-gray-400">点击「统计」查看</div>';
+  document.getElementById('wc-topwords').classList.add('hidden');
+}
+
+function escapeHtml(s) { return String(s).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[m]); }
+</script>
