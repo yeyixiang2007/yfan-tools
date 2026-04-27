@@ -64,9 +64,31 @@
   </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/mermaid@9.4.3/dist/mermaid.min.js"></script>
 <script>
-mermaid.initialize({ startOnLoad: false, securityLevel: 'loose' });
+// Mermaid CDN loader with fallback
+(function() {
+  var urls = [
+    'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js',
+    'https://unpkg.com/mermaid@10/dist/mermaid.min.js',
+    'https://cdnjs.cloudflare.com/ajax/libs/mermaid/10.9.1/mermaid.min.js'
+  ];
+  function tryLoad(i) {
+    if (i >= urls.length) return;
+    var s = document.createElement('script');
+    s.src = urls[i];
+    s.onerror = function() { tryLoad(i+1); };
+    s.onload = function() {
+      try {
+        mermaid.initialize({ startOnLoad: false, securityLevel: 'loose' });
+        renderMermaid();
+      } catch(e) { tryLoad(i+1); }
+    };
+    document.body.appendChild(s);
+  }
+  tryLoad(0);
+})();
+</script>
+<script>
 
 let debounceTimer = null;
 function debounce(fn, ms) {
@@ -74,56 +96,58 @@ function debounce(fn, ms) {
 }
 
 function renderMermaid() {
-  const code = document.getElementById('mermaid-input').value.trim();
+  var code = document.getElementById('mermaid-input').value.trim();
   if (!code) return;
 
-  const output = document.getElementById('mermaid-output');
-  const loading = document.getElementById('mermaid-loading');
-  const error = document.getElementById('mermaid-error');
+  var output = document.getElementById('mermaid-output');
+  var loading = document.getElementById('mermaid-loading');
+  var error = document.getElementById('mermaid-error');
 
   output.innerHTML = '';
   error.classList.add('hidden');
   loading.style.display = '';
 
-  let processed = code;
+  var processed = code;
   if (code.startsWith('graph ')) {
-    const dir = document.getElementById('mermaid-dir').value;
-    const lines = code.split(String.fromCharCode(10));
-    if (!lines[0].includes('TB') && !lines[0].includes('LR') && !lines[0].includes('BT') && !lines[0].includes('RL')) {
+    var dir = document.getElementById('mermaid-dir').value;
+    var lines = code.split(String.fromCharCode(10));
+    if (lines[0].indexOf('TB') === -1 && lines[0].indexOf('LR') === -1 && lines[0].indexOf('BT') === -1 && lines[0].indexOf('RL') === -1) {
       lines[0] = 'graph ' + dir;
       processed = lines.join(String.fromCharCode(10));
     }
   }
 
-  const id = 'mmd-' + Date.now();
-
-  if (typeof mermaid === 'undefined') {
+  if (typeof mermaid === 'undefined' || mermaid === null) {
     error.classList.remove('hidden');
-    error.textContent = 'Mermaid library not loaded';
+    error.textContent = 'Mermaid library not loaded, retrying...';
     loading.style.display = 'none';
     return;
   }
 
-  if (typeof mermaid.mermaidAPI !== 'undefined' && mermaid.mermaidAPI.render) {
-    mermaid.mermaidAPI.render(id, processed, function(svg) {
-      output.innerHTML = svg;
-      loading.style.display = 'none';
-    }, function(msg) {
-      error.classList.remove('hidden');
-      error.textContent = String(msg);
-      loading.style.display = 'none';
-    });
-  } else if (typeof mermaid.render !== 'undefined') {
-    mermaid.parse(processed);
-    mermaid.render(id, processed, null, function(svg) {
-      output.innerHTML = svg;
-      loading.style.display = 'none';
-    });
-  } else {
-    error.classList.remove('hidden');
-    error.textContent = 'Mermaid version not recognized';
+  // v10+: mermaid.render returns a promise
+  var id = 'mermaid-' + Date.now();
+  mermaid.render(id, processed).then(function(result) {
+    if (result && result.svg) {
+      output.innerHTML = result.svg;
+    }
     loading.style.display = 'none';
-  }
+  }).catch(function(err) {
+    // v10 old callback style fallback  
+    if (mermaid.mermaidAPI && mermaid.mermaidAPI.render) {
+      mermaid.mermaidAPI.render(id, processed, function(svg) {
+        output.innerHTML = svg;
+        loading.style.display = 'none';
+      }, function(msg) {
+        error.classList.remove('hidden');
+        error.textContent = 'Render error: ' + msg;
+        loading.style.display = 'none';
+      });
+    } else {
+      error.classList.remove('hidden');
+      error.textContent = 'Error: ' + (err.message || err);
+      loading.style.display = 'none';
+    }
+  });
 }
 
 function insertTemplate(type) {
