@@ -90,6 +90,7 @@ const tools = [
   { id: 'palette',  name: '配色提取',           desc: '从图片中提取配色方案',                    icon: '🎨', category: 'media' },
   { id: 'speedtest', name: '网速测试',           desc: '浏览器测速，测试下载/上传/Ping',         icon: '⚡', category: 'info' },
   { id: 'git',       name: 'Git 命令生成器',        desc: '交互式生成 Git 命令，支持分支/提交/远程等', icon: '🔧', category: 'dev' },
+  { id: 'calendar',  name: '多功能日历',          desc: '月历/日期计算/世界时钟/年进度，四合一',      icon: '📅', category: 'info' },
 ]
 
 const viewDir = path.join(__dirname, '..', 'views')
@@ -120,11 +121,18 @@ module.exports = async function (fastify, opts) {
     const routePath = `/${tool.id}`
 
     fastify.get(routePath, async (req, reply) => {
+      const extra = {}
+      if (tool.id === 'codesandbox') {
+        extra.initialHtml = '<div id="app">\n  <h1>Hello, Sandbox!</h1>\n  <p>点击按钮试试</p>\n  <button id="btn">Click Me</button>\n</div>'
+        extra.initialCss = 'body {\n  font-family: system-ui, sans-serif;\n  display: flex;\n  justify-content: center;\n  align-items: center;\n  min-height: 100vh;\n  margin: 0;\n  background: #f0f0f0;\n}\n#app { text-align: center; }\nbutton {\n  padding: 10px 24px;\n  border-radius: 8px;\n  border: none;\n  background: #6366f1;\n  color: white;\n  font-size: 16px;\n  cursor: pointer;\n}'
+        extra.initialJs = 'document.getElementById(\'btn\').addEventListener(\'click\', function() {\n  var msg = \'Hello from sandbox!\';\n  console.log(msg);\n  alert(msg);\n});'
+      }
       return reply.type('text/html').send(renderWithLayout(tool.id, {
         title: `${tool.name} - yfan.tools`,
         tool,
         tools,
         categories,
+        ...extra,
       }))
     })
   }
