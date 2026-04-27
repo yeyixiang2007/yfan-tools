@@ -1,0 +1,181 @@
+<%- /* content block for layout */ '' %>
+<% var content = ''; %>
+
+<div>
+  <div class="mb-6">
+    <a href="/" class="text-sm text-blue-500 hover:text-blue-700">&larr; 返回首页</a>
+  </div>
+
+  <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 md:p-8">
+    <div class="flex items-center gap-3 mb-4">
+      <span class="text-3xl"><%- tool.icon %></span>
+      <div>
+        <h1 class="text-2xl font-bold text-gray-800"><%- tool.name %></h1>
+        <p class="text-sm text-gray-500"><%- tool.desc %></p>
+      </div>
+    </div>
+
+    <div class="border-t border-gray-100 pt-6 mt-2">
+      <div class="flex flex-wrap gap-2 mb-4">
+        <button onclick="searchUA()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium">🔍 解析</button>
+        <button onclick="pasteUA()" class="px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 text-sm font-medium">📋 粘贴</button>
+        <button onclick="clearAll()" class="px-4 py-2 bg-white border border-gray-300 text-gray-500 rounded-lg hover:bg-gray-50 text-sm font-medium">清空</button>
+      </div>
+
+      <div class="mb-4">
+        <label class="block text-sm font-medium text-gray-700 mb-1">User-Agent 字符串</label>
+        <textarea id="ua-input" rows="3" class="w-full border border-gray-300 rounded-lg p-3 font-mono text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" spellcheck="false">Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36</textarea>
+      </div>
+
+      <div id="ua-result" class="hidden space-y-3">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div class="p-4 bg-blue-50 border border-blue-100 rounded-lg">
+            <div class="text-xs text-blue-600 font-medium mb-1">🌐 浏览器</div>
+            <div id="ua-browser" class="text-sm font-medium text-gray-800">-</div>
+          </div>
+          <div class="p-4 bg-green-50 border border-green-100 rounded-lg">
+            <div class="text-xs text-green-600 font-medium mb-1">💻 操作系统</div>
+            <div id="ua-os" class="text-sm font-medium text-gray-800">-</div>
+          </div>
+          <div class="p-4 bg-purple-50 border border-purple-100 rounded-lg">
+            <div class="text-xs text-purple-600 font-medium mb-1">📱 设备类型</div>
+            <div id="ua-device" class="text-sm font-medium text-gray-800">-</div>
+          </div>
+          <div class="p-4 bg-orange-50 border border-orange-100 rounded-lg">
+            <div class="text-xs text-orange-600 font-medium mb-1">⚙️ 引擎</div>
+            <div id="ua-engine" class="text-sm font-medium text-gray-800">-</div>
+          </div>
+        </div>
+
+        <div class="p-4 bg-gray-50 rounded-lg">
+          <h3 class="text-xs font-medium text-gray-600 mb-2">🔬 详细检测</h3>
+          <div id="ua-details" class="text-xs font-mono text-gray-500 space-y-1"></div>
+        </div>
+      </div>
+
+      <div class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-2">
+        <div class="p-2 bg-gray-50 rounded">
+          <p class="text-xs text-gray-500 mb-1">💡 试试这些 UA</p>
+          <div class="space-y-0.5">
+            <div class="text-xs text-blue-500 cursor-pointer hover:text-blue-700" onclick="tryUA('Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1')">iPhone Safari</div>
+            <div class="text-xs text-blue-500 cursor-pointer hover:text-blue-700" onclick="tryUA('Mozilla/5.0 (Linux; Android 14; Pixel 8 Pro) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.6099.230 Mobile Safari/537.36')">Pixel 8 Android</div>
+            <div class="text-xs text-blue-500 cursor-pointer hover:text-blue-700" onclick="tryUA('curl/8.4.0')">curl</div>
+          </div>
+        </div>
+        <div class="p-2 bg-gray-50 rounded">
+          <p class="text-xs text-gray-500 mb-1">🔄 随机 UA</p>
+          <button onclick="randomUA()" class="px-2 py-1 bg-white border rounded text-xs hover:bg-gray-50">🎲 随机生成</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const UAS = [
+  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.1 Safari/605.1.15',
+  'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+  'Mozilla/5.0 (iPhone; CPU iPhone OS 17_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.1 Mobile/15E148 Safari/604.1',
+  'Mozilla/5.0 (Linux; Android 14; SM-S918B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.6099.230 Mobile Safari/537.36',
+];
+
+function searchUA() {
+  const ua = document.getElementById('ua-input').value.trim();
+  if (!ua) return;
+
+  const result = document.getElementById('ua-result');
+  result.classList.remove('hidden');
+
+  // Parse browser
+  let browser = '未知';
+  let version = '';
+  const browsers = [
+    { re: /Edg\/([\d.]+)/, name: 'Edge' },
+    { re: /Firefox\/([\d.]+)/, name: 'Firefox' },
+    { re: /OPR\/([\d.]+)/, name: 'Opera' },
+    { re: /Chrome\/([\d.]+)/, name: 'Chrome' },
+    { re: /Safari\/([\d.]+)/, name: 'Safari' },
+    { re: /curl\/([\d.]+)/, name: 'curl' },
+    { re: /PostmanRuntime\/([\d.]+)/, name: 'Postman' },
+    { re: /python-requests\/([\d.]+)/, name: 'Python Requests' },
+    { re: /axios\/([\d.]+)/, name: 'Axios' },
+  ];
+
+  for (const b of browsers) {
+    const m = ua.match(b.re);
+    if (m) {
+      browser = b.name;
+      version = m[1];
+      break;
+    }
+  }
+
+  // Parse OS
+  let os = '未知';
+  if (ua.includes('Windows NT 10.')) os = 'Windows 10';
+  else if (ua.includes('Windows NT 11.')) os = 'Windows 11';
+  else if (ua.includes('Windows NT 6.3')) os = 'Windows 8.1';
+  else if (ua.includes('Windows NT 6.1')) os = 'Windows 7';
+  else if (ua.includes('Mac OS X')) {
+    const m = ua.match(/Mac OS X (\d+[._]\d+[._]\d+)/);
+    os = m ? `macOS ${m[1].replace(/_/g, '.')}` : 'macOS';
+  } else if (ua.includes('Android')) {
+    const m = ua.match(/Android (\d+[.\d]*)/);
+    os = m ? `Android ${m[1]}` : 'Android';
+  } else if (ua.includes('iPhone OS') || ua.includes('iOS')) {
+    const m = ua.match(/iPhone OS (\d+[._]\d+)/);
+    os = m ? `iOS ${m[1].replace(/_/g, '.')}` : 'iOS';
+  } else if (ua.includes('Linux')) os = 'Linux';
+  else if (ua.includes('curl')) os = 'CLI';
+
+  // Device
+  let device = 'Desktop';
+  if (ua.includes('iPhone') || ua.includes('iPad') || ua.includes('iPod')) device = 'iOS';
+  else if (/Android.*Mobile/.test(ua)) device = 'Android 手机';
+  else if (ua.includes('Android')) device = 'Android 平板';
+  else if (ua.includes('Mobile')) device = '手机';
+
+  // Engine
+  let engine = '未知';
+  if (ua.includes('WebKit') && !ua.includes('Chrome')) engine = 'WebKit';
+  else if (ua.includes('Gecko') && !ua.includes('WebKit')) engine = 'Gecko';
+  else if (ua.includes('Chrome') || ua.includes('Chromium')) engine = 'Blink';
+  else if (ua.includes('Trident')) engine = 'Trident';
+
+  document.getElementById('ua-browser').textContent = browser + (version ? ` v${version}` : '');
+  document.getElementById('ua-os').textContent = os;
+  document.getElementById('ua-device').textContent = device;
+  document.getElementById('ua-engine').textContent = engine;
+
+  document.getElementById('ua-details').innerHTML = `
+    <div>完整 UA 长度: ${ua.length} 字符</div>
+    <div>是移动端: ${ua.includes('Mobile') ? '是' : '否'}</div>
+    <div>是平板: ${ua.includes('Tablet') || ua.includes('iPad') ? '是' : '否'}</div>
+    <div>支持 Service Worker: ${ua.includes('Chrome') || ua.includes('Firefox') || ua.includes('Safari') ? '是（现代浏览器）' : '未知'}</div>
+  `;
+}
+
+function pasteUA() {
+  navigator.clipboard.readText().then(text => {
+    document.getElementById('ua-input').value = text;
+    searchUA();
+  }).catch(() => alert('无法读取剪贴板'));
+}
+
+function tryUA(ua) {
+  document.getElementById('ua-input').value = ua;
+  searchUA();
+}
+
+function randomUA() {
+  const ua = UAS[Math.floor(Math.random() * UAS.length)];
+  document.getElementById('ua-input').value = ua;
+  searchUA();
+}
+
+function clearAll() {
+  document.getElementById('ua-input').value = '';
+  document.getElementById('ua-result').classList.add('hidden');
+}
+</script>

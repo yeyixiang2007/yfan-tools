@@ -1,0 +1,150 @@
+<%- /* content block for layout */ '' %>
+<% var content = ''; %>
+
+<div>
+  <div class="mb-6">
+    <a href="/" class="text-sm text-blue-500 hover:text-blue-700">&larr; 返回首页</a>
+  </div>
+
+  <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 md:p-8">
+    <div class="flex items-center gap-3 mb-4">
+      <span class="text-3xl"><%- tool.icon %></span>
+      <div>
+        <h1 class="text-2xl font-bold text-gray-800"><%- tool.name %></h1>
+        <p class="text-sm text-gray-500"><%- tool.desc %></p>
+      </div>
+    </div>
+
+    <div class="border-t border-gray-100 pt-6 mt-2">
+      <div class="flex flex-wrap gap-2 mb-4">
+        <button onclick="computeDiff()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium">🔍 对比差异</button>
+        <button onclick="swapText()" class="px-4 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-800 text-sm font-medium">⇄ 交换</button>
+        <button onclick="copyDiff()" class="px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 text-sm font-medium">📋 复制</button>
+        <button onclick="clearAll()" class="px-4 py-2 bg-white border border-gray-300 text-gray-500 rounded-lg hover:bg-gray-50 text-sm font-medium">清空</button>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">原文</label>
+          <textarea id="diff-left" rows="10" class="w-full border border-gray-300 rounded-lg p-3 font-mono text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" spellcheck="false">hello world
+foo bar
+baz qux
+line 4
+line 5</textarea>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">修改后</label>
+          <textarea id="diff-right" rows="10" class="w-full border border-gray-300 rounded-lg p-3 font-mono text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" spellcheck="false">hello world
+foo bar baz
+baz qux
+line 4 modified
+line 5
+line 6</textarea>
+        </div>
+      </div>
+
+      <div id="diff-output" class="hidden">
+        <label class="block text-sm font-medium text-gray-700 mb-1">差异结果</label>
+        <div id="diff-result" class="w-full border border-gray-300 rounded-lg p-3 font-mono text-sm bg-gray-50 overflow-x-auto min-h-[100px] whitespace-pre-wrap"></div>
+        <div id="diff-stats" class="mt-2 text-xs text-gray-500"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+function computeDiff() {
+  const left = document.getElementById('diff-left').value;
+  const right = document.getElementById('diff-right').value;
+  const output = document.getElementById('diff-output');
+  const result = document.getElementById('diff-result');
+
+  const lLines = left.split('\n');
+  const rLines = right.split('\n');
+
+  // Simple LCS-based diff
+  const diff = simpleDiff(lLines, rLines);
+
+  let html = '';
+  let addCount = 0, delCount = 0, eqCount = 0;
+
+  for (const d of diff) {
+    const line = escapeHtml(d.text);
+    if (d.type === 'add') {
+      html += `<div class="bg-green-100 text-green-800 px-2 py-0.5 rounded my-0.5">+ ${line}</div>`;
+      addCount++;
+    } else if (d.type === 'del') {
+      html += `<div class="bg-red-100 text-red-600 px-2 py-0.5 rounded my-0.5">- ${line}</div>`;
+      delCount++;
+    } else {
+      html += `<div class="text-gray-500 px-2 py-0.5">  ${line}</div>`;
+      eqCount++;
+    }
+  }
+
+  result.innerHTML = html;
+  output.classList.remove('hidden');
+  document.getElementById('diff-stats').textContent = `${eqCount} 行相同 · +${addCount} 行新增 · -${delCount} 行删除`;
+}
+
+function simpleDiff(a, b) {
+  // Myers-like simplification: use longest common subsequence
+  const m = a.length, n = b.length;
+  const dp = Array.from({ length: m + 1 }, () => Array(n + 1).fill(0));
+
+  for (let i = 1; i <= m; i++) {
+    for (let j = 1; j <= n; j++) {
+      if (a[i - 1] === b[j - 1]) {
+        dp[i][j] = dp[i - 1][j - 1] + 1;
+      } else {
+        dp[i][j] = Math.max(dp[i - 1][j], dp[i][j - 1]);
+      }
+    }
+  }
+
+  // Backtrack
+  const result = [];
+  let i = m, j = n;
+  const temp = [];
+  while (i > 0 || j > 0) {
+    if (i > 0 && j > 0 && a[i - 1] === b[j - 1]) {
+      temp.push({ type: 'eq', text: a[i - 1] });
+      i--; j--;
+    } else if (j > 0 && (i === 0 || dp[i][j - 1] >= dp[i - 1][j])) {
+      temp.push({ type: 'add', text: b[j - 1] });
+      j--;
+    } else {
+      temp.push({ type: 'del', text: a[i - 1] });
+      i--;
+    }
+  }
+
+  return temp.reverse();
+}
+
+function swapText() {
+  const left = document.getElementById('diff-left');
+  const right = document.getElementById('diff-right');
+  [left.value, right.value] = [right.value, left.value];
+  computeDiff();
+}
+
+function copyDiff() {
+  const result = document.getElementById('diff-result');
+  const text = result.textContent;
+  if (!text) return;
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = document.querySelector('[onclick="copyDiff()"]');
+    btn.textContent = '✅ 已复制';
+    setTimeout(() => btn.textContent = '📋 复制', 1500);
+  });
+}
+
+function clearAll() {
+  document.getElementById('diff-left').value = '';
+  document.getElementById('diff-right').value = '';
+  document.getElementById('diff-output').classList.add('hidden');
+}
+
+function escapeHtml(s) { return String(s).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[m]); }
+</script>

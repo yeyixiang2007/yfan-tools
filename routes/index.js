@@ -20,9 +20,11 @@ const tools = [
   { id: 'md2pdf',    name: 'Markdown → PDF',  desc: '将 Markdown 文档转换为格式美观的 PDF',  icon: '📄', category: 'doc' },
   { id: 'markdown',  name: 'Markdown 格式化',   desc: 'Markdown 源码格式化、表格对齐、实时预览', icon: '📝', category: 'doc' },
   { id: 'csv',       name: 'CSV 查看器',         desc: 'CSV 格式化浏览、CSV↔JSON 互转',        icon: '📊', category: 'doc' },
+  { id: 'diffcheck', name: '文本差异对比',         desc: 'LCS 算法逐行对比两段文本差异',           icon: '📑', category: 'doc' },
 
   // ── 多媒体 ──
   { id: 'image',     name: '图片处理',           desc: '图片压缩/格式转换/尺寸调整',               icon: '🖼️', category: 'media' },
+  { id: 'colorpicker',name: '颜色拾取器',          desc: '可视化调色板，HEX/RGB/HSL/CMYK 互转',     icon: '🎨', category: 'media' },
 
   // ── 编码/转换 ──
   { id: 'base64',    name: 'Base64 编解码',     desc: 'Base64 编码与解码，支持中文',          icon: '🔐', category: 'encode' },
@@ -37,7 +39,6 @@ const tools = [
 
   // ── 开发调试 ──
   { id: 'json',      name: 'JSON 格式化',       desc: 'JSON 格式化、压缩、校验',              icon: '🔧', category: 'dev' },
-  { id: 'diff',      name: '代码 Diff 对比',    desc: '两段文本/代码差异对比，LCS 算法',      icon: '📊', category: 'dev' },
   { id: 'regex',     name: '正则表达式测试',    desc: '正则匹配、替换、高亮预览',            icon: '🔍', category: 'dev' },
   { id: 'cron',      name: 'Cron 表达式生成',   desc: '可视化生成 cron 语法，预览执行时间',   icon: '⏱️', category: 'dev' },
   { id: 'hash',      name: 'Hash 生成器',       desc: 'MD5/SHA-1/SHA-256/SHA-512 哈希计算',  icon: '🔑', category: 'dev' },
@@ -50,6 +51,8 @@ const tools = [
   { id: 'ini',       name: 'INI 格式化',          desc: 'INI 格式化与 JSON 互转',               icon: '⚙️', category: 'dev' },
   { id: 'http',      name: 'HTTP 状态码查询',       desc: 'HTTP 状态码速查与搜索',                 icon: '📡', category: 'dev' },
   { id: 'mime',      name: 'MIME 类型查询',         desc: 'MIME 类型/扩展名速查',                 icon: '📎', category: 'dev' },
+  { id: 'tablegen',  name: '表格生成器',           desc: 'Markdown/HTML/Grid 表格生成',            icon: '📋', category: 'dev' },
+  { id: 'htmlpreview',name: 'HTML 实时预览',        desc: 'HTML 源码编辑与实时渲染预览',             icon: '🌍', category: 'dev' },
 
   // ── 生成创建 ──
   { id: 'password',  name: '密码生成器',        desc: '可配置的强密码批量生成',              icon: '🔑', category: 'gen' },
@@ -58,6 +61,7 @@ const tools = [
   { id: 'barcode',   name: '条形码生成',          desc: '支持 CODE128/EAN13/UPC 等格式',        icon: '🏷️', category: 'gen' },
   { id: 'lorem',     name: 'Lorem Ipsum',         desc: 'Lorem Ipsum 假文生成器（单词/句子/段落）', icon: '📝', category: 'gen' },
   { id: 'emoji',     name: 'Emoji 搜索',           desc: 'Emoji 搜索与复制（分类/关键字搜索）',   icon: '😊', category: 'gen' },
+  { id: 'charts',    name: 'ASCII 图表',           desc: '柱状图/折线图/饼图 ASCII 图表生成',      icon: '📈', category: 'gen' },
 
   // ── 信息查询 ──
   { id: 'ip',        name: 'IP 信息查询',       desc: '查询 IP 归属地、运营商、ASN 等信息',   icon: '🌐', category: 'info' },
@@ -66,6 +70,7 @@ const tools = [
   { id: 'dns',       name: 'DNS 查询',           desc: 'A/AAAA/MX/NS/TXT/CNAME/SOA 记录查询',  icon: '🌐', category: 'info' },
   { id: 'port',      name: '端口查询',           desc: '常用端口查询与速查表',                  icon: '🚪', category: 'info' },
   { id: 'unit',      name: '单位转换器',           desc: '长度/重量/温度/体积/数据等 10 类单位转换', icon: '📏', category: 'info' },
+  { id: 'useragent', name: 'UA 解析器',            desc: 'User-Agent 字符串解析，识别浏览器/OS/设备', icon: '🌐', category: 'info' },
 
   // ── 文本处理 ──
   { id: 'counter',   name: '文本统计',          desc: '字符、单词、行数、中文字数实时统计',    icon: '📊', category: 'text' },

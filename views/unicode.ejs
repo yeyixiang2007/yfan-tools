@@ -65,7 +65,7 @@ const detailsEl = document.getElementById('unicode-details');
 function autoEncode() { encodeUnicode(); }
 
 function encodeUnicode() {
-  const text = inputEl;
+  const text = inputEl.value;
   const format = document.querySelector('input[name="unicode-format"]:checked').value;
   let result = '';
   let details = '';
@@ -83,7 +83,7 @@ function encodeUnicode() {
       case 'hex': enc = hex; break;
     }
     result += enc;
-    details += `<div class="flex gap-3"><span class="w-6 text-center">${ch}</span><span class="text-gray-400">U+${hex}</span><span class="text-gray-400">${code}</span></div>`;
+    details += `<div class="flex gap-3"><span class="w-6 text-center">${escapeHtml(ch)}</span><span class="text-gray-400">U+${hex}</span><span class="text-gray-400">${code}</span></div>`;
   }
 
   outputEl.value = result;
