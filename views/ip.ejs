@@ -66,10 +66,9 @@ async function lookupMyIP() {
     // 先获取本机 IP
     const resp = await fetch('/ip/lookup?myip=1');
     const data = await resp.json();
-    if (data.ip) {
-      document.getElementById('ip-input').value = data.ip;
-      myIPCache = data.location;
-      await showResult(myIPCache);
+    if (data.query) {
+      document.getElementById('ip-input').value = data.query;
+      await showResult(data);
     } else {
       throw new Error(data.error || '获取失败');
     }
