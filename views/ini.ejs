@@ -150,7 +150,8 @@ function copyResult() {
     const btn = document.querySelector('[onclick="copyResult()"]');
     btn.textContent = '✅ 已复制';
     setTimeout(() => btn.textContent = '📋 复制', 1500);
-  });
+  })
+      .catch(function(err) { console.error(err); });;
 }
 
 function clearAll() { inputEl.value = ''; outputEl.value = ''; statusEl.textContent = ''; }

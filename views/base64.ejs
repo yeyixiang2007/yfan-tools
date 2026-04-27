@@ -147,7 +147,8 @@ function copyOutput() {
     const orig = btn.textContent;
     btn.textContent = '✅';
     setTimeout(() => btn.textContent = orig, 1500);
-  });
+  })
+      .catch(function(err) { console.error(err); });;
 }
 
 // ── 文件 → Base64 ──
@@ -188,7 +189,8 @@ function copyFileResult() {
     const orig = btn.textContent;
     btn.textContent = '✅';
     setTimeout(() => btn.textContent = orig, 1500);
-  });
+  })
+      .catch(function(err) { console.error(err); });;
 }
 
 // ── Base64 → 文件下载 ──

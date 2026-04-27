@@ -98,7 +98,8 @@ function copyAllUUIDs() {
     const orig = btn.textContent;
     btn.textContent = '✅ 已复制 ' + text.split('\n').length + ' 个';
     setTimeout(() => btn.textContent = orig, 2000);
-  });
+  })
+      .catch(function(err) { console.error(err); });;
 }
 
 // 自动生成初始

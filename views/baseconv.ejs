@@ -170,7 +170,8 @@ function copyBaseResult(type) {
         }, 1500);
       }
     }
-  });
+  })
+      .catch(function(err) { console.error(err); });;
 }
 
 function quickExample(value, base) {

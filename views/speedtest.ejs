@@ -85,7 +85,7 @@ async function startTest() {
   log.innerHTML = '';
 
   function updateLog(msg) {
-    log.innerHTML += `<div>${msg}</div>`;
+    var _d = document.createElement("div"); _d.textContent = msg; log.appendChild(_d);
     log.scrollTop = log.scrollHeight;
   }
 

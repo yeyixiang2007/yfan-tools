@@ -184,7 +184,8 @@ function copyJSON() {
     const btn = document.querySelector('#ip-raw-json').parentElement.querySelector('button');
     btn.textContent = '✅ 已复制';
     setTimeout(() => { btn.textContent = '📋 复制'; }, 2000);
-  });
+  })
+      .catch(function(err) { console.error(err); });;
 }
 
 function showError(msg) {

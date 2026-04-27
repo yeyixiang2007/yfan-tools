@@ -86,6 +86,7 @@ const tools = [
   { id: 'anagram',   name: '字谜检测',             desc: 'Anagram 字谜检测与全文查找',            icon: '🔀', category: 'text' },
   { id: 'wordcount', name: '词频统计',             desc: '字符/单词/句子统计 + 词频可视化排行榜', icon: '📈', category: 'text' },
   { id: 'speedtest', name: '网速测试',           desc: '浏览器测速，测试下载/上传/Ping',         icon: '⚡', category: 'info' },
+  { id: 'git',       name: 'Git 命令生成器',        desc: '交互式生成 Git 命令，支持分支/提交/远程等', icon: '🔧', category: 'dev' },
 ]
 
 const viewDir = path.join(__dirname, '..', 'views')
@@ -101,6 +102,11 @@ function renderWithLayout(tplName, data) {
 }
 
 module.exports = async function (fastify, opts) {
+  // ── Tools API（搜索数据统一来源）───
+  fastify.get('/api/tools', async (req, reply) => {
+    return reply.send(tools.map(t => ({ id: t.id, name: t.name, desc: t.desc, icon: t.icon })))
+  })
+
   // ── Home ──
   fastify.get('/', async (req, reply) => {
     return reply.type('text/html').send(renderWithLayout('index', { categories, tools, title: 'yfan.tools' }))

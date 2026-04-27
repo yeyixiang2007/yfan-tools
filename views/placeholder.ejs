@@ -98,7 +98,8 @@ function copySVG() {
     const btn = document.querySelector('[onclick^="copySVG"]');
     btn.textContent = '✅ 已复制';
     setTimeout(() => btn.textContent = '📋 复制 SVG', 1500);
-  });
+  })
+      .catch(function(err) { console.error(err); });;
 }
 
 function downloadSVG() {

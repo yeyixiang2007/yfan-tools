@@ -33,7 +33,7 @@
 ## 代码
 
 \`\`\`javascript
-console.log('Hello World!');
+        // console.log('Hello World!');  // removed
 \`\`\`
 
 ## 表格
@@ -133,6 +133,7 @@ function exportPDFBackend() {
     if (!res.ok) throw new Error('生成失败');
     return res.blob();
   })
+      .catch(function(err) { console.error(err); });
   .then(blob => {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');

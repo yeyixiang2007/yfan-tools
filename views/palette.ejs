@@ -204,6 +204,7 @@ function exportPalette() {
     const btn = document.querySelector('[onclick^="exportPalette"]');
     btn.textContent = '✅ 已导出';
     setTimeout(() => btn.textContent = '📋 导出', 1500);
-  });
+  })
+      .catch(function(err) { console.error(err); });;
 }
 </script>
