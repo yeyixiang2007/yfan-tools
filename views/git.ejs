@@ -1,0 +1,734 @@
+<%- /* content block for layout */ '' %>
+<% var content = ''; %>
+
+<div>
+  <div class="mb-6">
+    <a href="/" class="text-sm text-blue-500 hover:text-blue-700">&larr; 返回首页</a>
+  </div>
+
+  <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 md:p-8">
+    <div class="flex items-center gap-3 mb-4">
+      <span class="text-3xl"><%- tool.icon %></span>
+      <div>
+        <h1 class="text-2xl font-bold text-gray-800"><%- tool.name %></h1>
+        <p class="text-sm text-gray-500"><%- tool.desc %></p>
+      </div>
+    </div>
+
+    <div class="border-t border-gray-100 pt-6 mt-2">
+      <!-- 分类选择 -->
+      <div class="mb-5">
+        <label class="block text-sm font-medium text-gray-700 mb-2">操作分类</label>
+        <div class="flex flex-wrap gap-2" id="category-btns">
+          <button class="px-3 py-1.5 rounded-lg text-sm font-medium bg-blue-600 text-white" data-cat="basic" onclick="selectCategory('basic')">基础操作</button>
+          <button class="px-3 py-1.5 rounded-lg text-sm font-medium bg-gray-100 text-gray-600 hover:bg-gray-200" data-cat="branch" onclick="selectCategory('branch')">分支管理</button>
+          <button class="px-3 py-1.5 rounded-lg text-sm font-medium bg-gray-100 text-gray-600 hover:bg-gray-200" data-cat="remote" onclick="selectCategory('remote')">远程仓库</button>
+          <button class="px-3 py-1.5 rounded-lg text-sm font-medium bg-gray-100 text-gray-600 hover:bg-gray-200" data-cat="commit" onclick="selectCategory('commit')">提交管理</button>
+          <button class="px-3 py-1.5 rounded-lg text-sm font-medium bg-gray-100 text-gray-600 hover:bg-gray-200" data-cat="undo" onclick="selectCategory('undo')">撤销/回滚</button>
+          <button class="px-3 py-1.5 rounded-lg text-sm font-medium bg-gray-100 text-gray-600 hover:bg-gray-200" data-cat="diff" onclick="selectCategory('diff')">查看变动</button>
+          <button class="px-3 py-1.5 rounded-lg text-sm font-medium bg-gray-100 text-gray-600 hover:bg-gray-200" data-cat="stash" onclick="selectCategory('stash')">暂存管理</button>
+          <button class="px-3 py-1.5 rounded-lg text-sm font-medium bg-gray-100 text-gray-600 hover:bg-gray-200" data-cat="config" onclick="selectCategory('config')">配置</button>
+          <button class="px-3 py-1.5 rounded-lg text-sm font-medium bg-gray-100 text-gray-600 hover:bg-gray-200" data-cat="tag" onclick="selectCategory('tag')">标签</button>
+          <button class="px-3 py-1.5 rounded-lg text-sm font-medium bg-gray-100 text-gray-600 hover:bg-gray-200" data-cat="advanced" onclick="selectCategory('advanced')">高级</button>
+        </div>
+      </div>
+
+      <!-- 操作选择 -->
+      <div class="mb-5">
+        <label class="block text-sm font-medium text-gray-700 mb-2">具体操作</label>
+        <div id="action-list" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2"></div>
+      </div>
+
+      <!-- 参数区域 -->
+      <div id="params-area" class="mb-5 hidden">
+        <label class="block text-sm font-medium text-gray-700 mb-2">参数配置</label>
+        <div id="params-form" class="space-y-3 bg-gray-50 rounded-lg p-4 border border-gray-200"></div>
+      </div>
+
+      <!-- 生成命令 -->
+      <div id="result-area" class="hidden">
+        <div class="flex items-center justify-between mb-2">
+          <label class="block text-sm font-medium text-gray-700">生成的命令</label>
+          <div class="flex gap-2">
+            <button onclick="copyCommand()" class="px-3 py-1.5 text-xs font-medium bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition">📋 复制</button>
+            <button onclick="resetAll()" class="px-3 py-1.5 text-xs font-medium bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition">🔄 重置</button>
+          </div>
+        </div>
+        <div id="command-display" class="bg-gray-900 text-green-400 font-mono text-sm p-4 rounded-lg overflow-x-auto whitespace-pre-wrap select-all"></div>
+        <div id="command-desc" class="mt-2 text-sm text-gray-500 bg-blue-50 border border-blue-100 rounded-lg p-3"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── 所有命令的定义 ──
+const COMMANDS = {
+  basic: [
+    { id: 'init', label: 'git init', desc: '初始化一个新的 Git 仓库', params: [
+      { key: 'dir', label: '项目目录', type: 'text', placeholder: '留空为当前目录', optional: true },
+    ]},
+    { id: 'clone', label: 'git clone', desc: '克隆一个远程仓库到本地', params: [
+      { key: 'url', label: '远程仓库 URL', type: 'text', placeholder: 'https://github.com/user/repo.git' },
+      { key: 'dir', label: '目标目录', type: 'text', placeholder: '留空用仓库名', optional: true },
+      { key: 'depth', label: '浅克隆深度', type: 'number', placeholder: '留空为完整克隆', optional: true },
+    ]},
+    { id: 'status', label: 'git status', desc: '查看工作区文件状态' },
+    { id: 'add', label: 'git add', desc: '将文件添加到暂存区', params: [
+      { key: 'files', label: '文件路径', type: 'text', placeholder: 'README.md 或 . 添加全部' },
+      { key: 'patch', label: '交互式暂存', type: 'checkbox', desc: '逐块选择暂存 (-p)' },
+    ]},
+    { id: 'rm', label: 'git rm', desc: '删除文件并从 Git 中移除跟踪', params: [
+      { key: 'files', label: '文件路径', type: 'text', placeholder: '要删除的文件' },
+      { key: 'cached', label: '仅取消跟踪（保留文件）', type: 'checkbox', desc: '--cached' },
+    ]},
+    { id: 'mv', label: 'git mv', desc: '移动或重命名文件', params: [
+      { key: 'source', label: '源文件', type: 'text', placeholder: 'old-name.js' },
+      { key: 'dest', label: '目标路径', type: 'text', placeholder: 'new-name.js' },
+    ]},
+  ],
+  branch: [
+    { id: 'branch', label: 'git branch', desc: '列出、创建或删除分支', params: [
+      { key: 'action', label: '操作', type: 'select', options: [
+        { value: 'list', label: '列出分支' },
+        { value: 'create', label: '创建新分支' },
+        { value: 'delete', label: '删除分支' },
+        { value: 'delete-force', label: '强制删除分支' },
+        { value: 'rename', label: '重命名当前分支' },
+      ]},
+      { key: 'name', label: '分支名', type: 'text', placeholder: 'feature/login', show: (v) => v !== 'list' },
+      { key: 'newname', label: '新分支名', type: 'text', placeholder: 'feature/auth', show: (v) => v === 'rename' },
+    ]},
+    { id: 'checkout', label: 'git checkout / switch', desc: '切换分支或恢复文件', params: [
+      { key: 'target', label: '目标分支', type: 'text', placeholder: 'main' },
+      { key: 'create', label: '创建并切换新分支', type: 'checkbox', desc: '-b 或 git switch -c' },
+      { key: 'newbranch', label: '新分支名', type: 'text', placeholder: 'feature/new', show: (v) => v.create },
+    ]},
+    { id: 'merge', label: 'git merge', desc: '合并指定分支到当前分支', params: [
+      { key: 'branch', label: '要合并的分支', type: 'text', placeholder: 'feature/login' },
+      { key: 'no-ff', label: '不使用快速合并(--no-ff)', type: 'checkbox' },
+      { key: 'squash', label: '压缩为单个提交(--squash)', type: 'checkbox' },
+      { key: 'msg', label: '合并提交信息', type: 'text', placeholder: '留空自动生成', optional: true },
+    ]},
+    { id: 'rebase', label: 'git rebase', desc: '将当前分支变基到另一个分支', params: [
+      { key: 'onto', label: '变基目标', type: 'text', placeholder: 'main' },
+      { key: 'interactive', label: '交互式变基', type: 'checkbox', desc: '-i' },
+    ]},
+  ],
+  remote: [
+    { id: 'remote-add', label: 'git remote add', desc: '添加远程仓库', params: [
+      { key: 'name', label: '远程名称', type: 'text', placeholder: 'origin' },
+      { key: 'url', label: '远程仓库 URL', type: 'text', placeholder: 'https://github.com/user/repo.git' },
+    ]},
+    { id: 'remote-remove', label: 'git remote remove', desc: '移除远程仓库', params: [
+      { key: 'name', label: '远程名称', type: 'text', placeholder: 'origin' },
+    ]},
+    { id: 'push', label: 'git push', desc: '推送当前分支到远程仓库', params: [
+      { key: 'remote', label: '远程仓库', type: 'text', placeholder: 'origin' },
+      { key: 'branch', label: '远程分支', type: 'text', placeholder: 'main', optional: true },
+      { key: 'set-upstream', label: '设置上游跟踪', type: 'checkbox', desc: '-u' },
+      { key: 'force', label: '强制推送', type: 'checkbox', desc: '-f（慎用！）' },
+    ]},
+    { id: 'pull', label: 'git pull', desc: '拉取远程仓库更新并合并', params: [
+      { key: 'remote', label: '远程仓库', type: 'text', placeholder: 'origin' },
+      { key: 'branch', label: '远程分支', type: 'text', placeholder: 'main', optional: true },
+      { key: 'rebase', label: '用 rebase 替代 merge', type: 'checkbox', desc: '--rebase' },
+    ]},
+    { id: 'fetch', label: 'git fetch', desc: '从远程仓库获取最新数据（不合并）', params: [
+      { key: 'remote', label: '远程仓库', type: 'text', placeholder: 'origin', optional: true },
+      { key: 'prune', label: '删除已过时的远程跟踪分支', type: 'checkbox', desc: '--prune' },
+      { key: 'all', label: '获取所有远程', type: 'checkbox', desc: '--all' },
+    ]},
+    { id: 'remote-rename', label: 'git remote rename', desc: '重命名远程仓库', params: [
+      { key: 'old', label: '旧名称', type: 'text', placeholder: 'origin' },
+      { key: 'new', label: '新名称', type: 'text', placeholder: 'upstream' },
+    ]},
+    { id: 'remote-url', label: 'git remote set-url', desc: '修改远程仓库地址', params: [
+      { key: 'name', label: '远程名称', type: 'text', placeholder: 'origin' },
+      { key: 'url', label: '新 URL', type: 'text', placeholder: 'https://github.com/user/repo.git' },
+    ]},
+  ],
+  commit: [
+    { id: 'commit', label: 'git commit', desc: '提交暂存区的更改', params: [
+      { key: 'msg', label: '提交信息', type: 'text', placeholder: 'feat: 添加登录功能' },
+      { key: 'amend', label: '修改上一次提交(--amend)', type: 'checkbox' },
+      { key: 'all', label: '添加所有变更后提交(-a)', type: 'checkbox' },
+    ]},
+    { id: 'log', label: 'git log', desc: '查看提交历史', params: [
+      { key: 'oneline', label: '简洁模式(--oneline)', type: 'checkbox' },
+      { key: 'graph', label: '图形化分支(--graph)', type: 'checkbox' },
+      { key: 'limit', label: '限制条数', type: 'number', placeholder: '10', optional: true },
+      { key: 'author', label: '按作者过滤', type: 'text', placeholder: 'username', optional: true },
+      { key: 'all', label: '所有分支(--all)', type: 'checkbox' },
+    ]},
+    { id: 'show', label: 'git show', desc: '查看指定提交的详细信息', params: [
+      { key: 'commit', label: '提交哈希', type: 'text', placeholder: 'HEAD 或 abc123' },
+      { key: 'stat', label: '显示文件统计', type: 'checkbox', desc: '--stat' },
+    ]},
+    { id: 'shortlog', label: 'git shortlog', desc: '按作者汇总提交信息', params: [
+      { key: 'summary', label: '仅显示提交数', type: 'checkbox', desc: '-sn' },
+      { key: 'all', label: '所有分支', type: 'checkbox', desc: '--all' },
+    ]},
+  ],
+  undo: [
+    { id: 'reset', label: 'git reset', desc: '撤销提交，回退到指定版本', params: [
+      { key: 'mode', label: '模式', type: 'select', options: [
+        { value: 'soft', label: '--soft（保留工作区和暂存区）' },
+        { value: 'mixed', label: '--mixed（保留工作区）' },
+        { value: 'hard', label: '--hard（全丢弃！慎用）' },
+      ]},
+      { key: 'target', label: '回退到', type: 'text', placeholder: 'HEAD~1 或 commit-hash' },
+    ]},
+    { id: 'revert', label: 'git revert', desc: '撤销一个提交（生成新的反向提交）', params: [
+      { key: 'commit', label: '要撤销的提交', type: 'text', placeholder: 'abc123' },
+      { key: 'no-edit', label: '不编辑提交信息', type: 'checkbox', desc: '--no-edit' },
+    ]},
+    { id: 'checkout-file', label: 'git checkout -- file', desc: '丢弃工作区的文件修改', params: [
+      { key: 'files', label: '文件路径', type: 'text', placeholder: 'README.md' },
+    ]},
+    { id: 'restore', label: 'git restore', desc: '恢复工作区或暂存区的文件（新式语法）', params: [
+      { key: 'target', label: '目标', type: 'select', options: [
+        { value: 'work', label: '恢复工作区（放弃修改）' },
+        { value: 'staged', label: '从暂存区恢复到工作区' },
+        { value: 'source', label: '从指定提交恢复文件' },
+      ]},
+      { key: 'files', label: '文件路径', type: 'text', placeholder: 'README.md' },
+      { key: 'source', label: '来源提交', type: 'text', placeholder: 'HEAD~1', show: (v) => v === 'source' },
+    ]},
+    { id: 'clean', label: 'git clean', desc: '删除未跟踪的文件', params: [
+      { key: 'dry-run', label: '预览(--dry-run)', type: 'checkbox' },
+      { key: 'force', label: '强制删除(-f)', type: 'checkbox' },
+      { key: 'dirs', label: '同时删除目录(-d)', type: 'checkbox' },
+    ]},
+  ],
+  diff: [
+    { id: 'diff', label: 'git diff', desc: '查看工作区与暂存区的差异', params: [
+      { key: 'staged', label: '查看暂存区与上次提交的差异', type: 'checkbox', desc: '--staged' },
+      { key: 'words', label: '按词对比(--word-diff)', type: 'checkbox' },
+      { key: 'file', label: '指定文件', type: 'text', placeholder: '留空对比所有', optional: true },
+    ]},
+    { id: 'blame', label: 'git blame', desc: '逐行查看文件的最后修改者', params: [
+      { key: 'file', label: '文件路径', type: 'text', placeholder: 'app.js' },
+    ]},
+    { id: 'diff-branch', label: 'git diff branch', desc: '比较两个分支的差异', params: [
+      { key: 'branch1', label: '分支 A', type: 'text', placeholder: 'main' },
+      { key: 'branch2', label: '分支 B', type: 'text', placeholder: 'dev' },
+      { key: 'stat', label: '仅统计(--stat)', type: 'checkbox' },
+    ]},
+    { id: 'log-file', label: 'git log -- file', desc: '查看某个文件的修改历史', params: [
+      { key: 'file', label: '文件路径', type: 'text', placeholder: 'app.js' },
+      { key: 'follow', label: '追踪文件重命名(--follow)', type: 'checkbox' },
+    ]},
+  ],
+  stash: [
+    { id: 'stash-save', label: 'git stash', desc: '暂存当前工作区修改', params: [
+      { key: 'msg', label: '暂存说明', type: 'text', placeholder: '留空自动生成', optional: true },
+      { key: 'include-untracked', label: '包含未跟踪文件', type: 'checkbox', desc: '-u' },
+    ]},
+    { id: 'stash-pop', label: 'git stash pop', desc: '恢复最近的暂存并删除它' },
+    { id: 'stash-apply', label: 'git stash apply', desc: '恢复最近的暂存（不删除）', params: [
+      { key: 'stash', label: '暂存引用', type: 'text', placeholder: 'stash@{0}', optional: true },
+    ]},
+    { id: 'stash-list', label: 'git stash list', desc: '列出所有暂存' },
+    { id: 'stash-drop', label: 'git stash drop', desc: '删除指定暂存', params: [
+      { key: 'stash', label: '暂存引用', type: 'text', placeholder: 'stash@{0}' },
+    ]},
+    { id: 'stash-show', label: 'git stash show', desc: '查看暂存中的改动', params: [
+      { key: 'stash', label: '暂存引用', type: 'text', placeholder: 'stash@{0}', optional: true },
+    ]},
+  ],
+  config: [
+    { id: 'config-user', label: 'git config user', desc: '设置用户名/邮箱', params: [
+      { key: 'name', label: '用户名', type: 'text', placeholder: 'Your Name', optional: true },
+      { key: 'email', label: 'Email', type: 'text', placeholder: 'you@example.com', optional: true },
+      { key: 'global', label: '全局配置(--global)', type: 'checkbox', desc: '不加则为当前仓库' },
+    ]},
+    { id: 'config-alias', label: 'git config alias', desc: '设置 Git 别名', params: [
+      { key: 'alias', label: '别名名称', type: 'text', placeholder: 'co' },
+      { key: 'command', label: '原始命令', type: 'text', placeholder: 'checkout' },
+      { key: 'global', label: '全局', type: 'checkbox', desc: '--global' },
+    ]},
+    { id: 'config-list', label: 'git config --list', desc: '查看所有配置' },
+    { id: 'config-edit', label: 'git config --edit', desc: '编辑配置文件', params: [
+      { key: 'global', label: '编辑全局配置', type: 'checkbox', desc: '--global' },
+    ]},
+  ],
+  tag: [
+    { id: 'tag-list', label: 'git tag', desc: '列出所有标签', params: [
+      { key: 'pattern', label: '搜索模式', type: 'text', placeholder: 'v1.*', optional: true },
+    ]},
+    { id: 'tag-create', label: 'git tag -a', desc: '创建带注释的标签', params: [
+      { key: 'name', label: '标签名', type: 'text', placeholder: 'v1.0.0' },
+      { key: 'msg', label: '标签说明', type: 'text', placeholder: 'Release v1.0.0' },
+      { key: 'commit', label: '指定提交', type: 'text', placeholder: '留空为 HEAD', optional: true },
+    ]},
+    { id: 'tag-delete', label: 'git tag -d', desc: '删除本地标签', params: [
+      { key: 'name', label: '标签名', type: 'text', placeholder: 'v1.0.0' },
+    ]},
+    { id: 'tag-push', label: 'git push --tags', desc: '推送所有标签到远程', params: [
+      { key: 'remote', label: '远程仓库', type: 'text', placeholder: 'origin' },
+    ]},
+  ],
+  advanced: [
+    { id: 'cherry-pick', label: 'git cherry-pick', desc: '将指定提交应用到当前分支', params: [
+      { key: 'commit', label: '提交哈希', type: 'text', placeholder: 'abc123' },
+      { key: 'no-commit', label: '不自动提交(-n)', type: 'checkbox' },
+    ]},
+    { id: 'bisect-start', label: 'git bisect start', desc: '开始二分查找找 Bug', params: [
+      { key: 'bad', label: 'Bad 提交', type: 'text', placeholder: 'HEAD' },
+      { key: 'good', label: 'Good 提交', type: 'text', placeholder: 'v1.0' },
+    ]},
+    { id: 'bisect-good', label: 'git bisect good', desc: '标记当前提交为正常' },
+    { id: 'bisect-bad', label: 'git bisect bad', desc: '标记当前提交为有问题' },
+    { id: 'bisect-reset', label: 'git bisect reset', desc: '结束 bisect，回到原始分支' },
+    { id: 'submodule-add', label: 'git submodule add', desc: '添加子模块', params: [
+      { key: 'url', label: '子模块仓库 URL', type: 'text', placeholder: 'https://github.com/user/lib.git' },
+      { key: 'path', label: '存放路径', type: 'text', placeholder: 'lib', optional: true },
+    ]},
+    { id: 'submodule-update', label: 'git submodule update', desc: '更新所有子模块', params: [
+      { key: 'init', label: '初始化(--init)', type: 'checkbox' },
+      { key: 'recursive', label: '递归(--recursive)', type: 'checkbox' },
+    ]},
+    { id: 'worktree-add', label: 'git worktree add', desc: '创建并切换到一个新的工作树', params: [
+      { key: 'path', label: '工作树路径', type: 'text', placeholder: '../project-feature' },
+      { key: 'branch', label: '分支名', type: 'text', placeholder: 'feature/login' },
+    ]},
+    { id: 'gc', label: 'git gc', desc: '清理并优化本地仓库', params: [
+      { key: 'aggressive', label: '激进优化(--aggressive)', type: 'checkbox' },
+      { key: 'prune', label: '修剪过期对象', type: 'checkbox', desc: '--prune=now' },
+    ]},
+    { id: 'archive', label: 'git archive', desc: '将仓库打包为 zip/tar 存档', params: [
+      { key: 'format', label: '格式', type: 'select', options: [
+        { value: 'zip', label: 'zip' },
+        { value: 'tar', label: 'tar' },
+        { value: 'tar.gz', label: 'tar.gz' },
+      ]},
+      { key: 'output', label: '输出文件名', type: 'text', placeholder: 'project.zip' },
+      { key: 'ref', label: '分支/标签/提交', type: 'text', placeholder: 'HEAD', optional: true },
+    ]},
+  ],
+};
+
+// ── 当前选中状态 ──
+let currentCat = 'basic';
+let currentAction = null;
+let lastParams = {};
+
+function selectCategory(cat) {
+  currentCat = cat;
+  // 切换按钮样式
+  document.querySelectorAll('#category-btns button').forEach(b => {
+    b.classList.toggle('bg-blue-600', b.dataset.cat === cat);
+    b.classList.toggle('text-white', b.dataset.cat === cat);
+    b.classList.toggle('bg-gray-100', b.dataset.cat !== cat);
+    b.classList.toggle('text-gray-600', b.dataset.cat !== cat);
+  });
+  // 生成操作列表
+  const list = document.getElementById('action-list');
+  const cmds = COMMANDS[cat] || [];
+  list.innerHTML = cmds.map(c => `
+    <button class="action-btn px-3 py-2 rounded-lg border text-sm text-left transition flex items-center gap-2
+                   ${currentAction === c.id ? 'bg-blue-50 border-blue-300 text-blue-700' : 'bg-white border-gray-200 text-gray-700 hover:border-blue-200 hover:bg-blue-50'}"
+            data-cmd="${c.id}" onclick="selectAction('${c.id}')">
+      <span>${c.label}</span>
+      <span class="text-xs text-gray-400 ml-auto">${c.desc.substring(0, 12)}...</span>
+    </button>
+  `).join('');
+  // 隐藏参数和结果
+  document.getElementById('params-area').classList.add('hidden');
+  document.getElementById('result-area').classList.add('hidden');
+  currentAction = null;
+}
+
+function selectAction(cmdId) {
+  currentAction = cmdId;
+  // 高亮选中按钮
+  document.querySelectorAll('.action-btn').forEach(b => {
+    const isActive = b.dataset.cmd === cmdId;
+    b.classList.toggle('bg-blue-50', isActive);
+    b.classList.toggle('border-blue-300', isActive);
+    b.classList.toggle('text-blue-700', isActive);
+    b.classList.toggle('bg-white', !isActive);
+    b.classList.toggle('border-gray-200', !isActive);
+    b.classList.toggle('text-gray-700', !isActive);
+  });
+
+  // 查找命令定义
+  let cmdDef = null;
+  for (const cat of Object.values(COMMANDS)) {
+    const f = cat.find(c => c.id === cmdId);
+    if (f) { cmdDef = f; break; }
+  }
+  if (!cmdDef) return;
+
+  // 生成参数表单
+  const paramsArea = document.getElementById('params-area');
+  const paramsForm = document.getElementById('params-form');
+
+  if (cmdDef.params && cmdDef.params.length > 0) {
+    paramsArea.classList.remove('hidden');
+    paramsForm.innerHTML = cmdDef.params.map((p, i) => `
+      <div class="param-row" data-key="${p.key}" data-show="${p.show || ''}">
+        <label class="block text-xs font-medium text-gray-600 mb-1">${p.label}${p.optional ? ' <span class="text-gray-400">(可选)</span>' : ''}</label>
+        ${p.type === 'text' ? `<input type="text" class="param-input w-full border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" data-key="${p.key}" placeholder="${p.placeholder || ''}" oninput="generateCommand()">` : ''}
+        ${p.type === 'number' ? `<input type="number" class="param-input w-full border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" data-key="${p.key}" placeholder="${p.placeholder || ''}" oninput="generateCommand()">` : ''}
+        ${p.type === 'checkbox' ? `<label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" class="param-input rounded border-gray-300 text-blue-600" data-key="${p.key}" onchange="generateCommand()"> <span class="text-sm text-gray-600">${p.desc || ''}</span></label>` : ''}
+        ${p.type === 'select' ? `<select class="param-input w-full border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" data-key="${p.key}" onchange="generateCommand()">${p.options.map(o => `<option value="${o.value}">${o.label}</option>`).join('')}</select>` : ''}
+      </div>
+    `).join('');
+
+    // 恢复上次的值
+    if (lastParams[cmdId]) {
+      document.querySelectorAll('.param-input').forEach(el => {
+        const key = el.dataset.key;
+        if (lastParams[cmdId][key] !== undefined) {
+          if (el.type === 'checkbox') el.checked = lastParams[cmdId][key];
+          else el.value = lastParams[cmdId][key];
+        }
+      });
+    }
+
+    // 处理动态显示/隐藏
+    handleShowConditions(cmdDef);
+  } else {
+    paramsArea.classList.add('hidden');
+  }
+
+  generateCommand();
+}
+
+function handleShowConditions(cmdDef) {
+  if (!cmdDef.params) return;
+  const form = document.getElementById('params-form');
+  // 绑定 select/checkbox 变化触发 show/hide
+  document.querySelectorAll('#params-form input[type="checkbox"], #params-form select').forEach(el => {
+    el.addEventListener('change', function() {
+      handleShowConditions(cmdDef);
+      generateCommand();
+    });
+  });
+
+  cmdDef.params.forEach(p => {
+    const row = form.querySelector(`.param-row[data-key="${p.key}"]`);
+    if (!row || !p.show) return;
+    // 检查引用
+    const refKey = p.show.toString().match(/\b(\w+)\b/)?.[1];
+    const refInput = form.querySelector(`.param-input[data-key="${refKey}"]`);
+    if (!refInput) return;
+    try {
+      const refVal = refInput.type === 'checkbox' ? refInput.checked : refInput.value;
+      const showFn = new Function('v', 'return ' + p.show);
+      row.classList.toggle('hidden', !showFn(refVal));
+    } catch(e) {}
+  });
+}
+
+function generateCommand() {
+  let cmdDef = null;
+  for (const cat of Object.values(COMMANDS)) {
+    const f = cat.find(c => c.id === currentAction);
+    if (f) { cmdDef = f; break; }
+  }
+  if (!cmdDef) return;
+
+  // 收集参数
+  const params = {};
+  document.querySelectorAll('.param-input').forEach(el => {
+    const key = el.dataset.key;
+    if (el.type === 'checkbox') params[key] = el.checked;
+    else params[key] = el.value.trim();
+  });
+  lastParams[currentAction] = params;
+
+  // 生成命令
+  let cmd = '';
+  let desc = cmdDef.desc;
+
+  switch (cmdDef.id) {
+    case 'init': cmd = 'git init' + (params.dir ? ' ' + params.dir : ''); break;
+    case 'clone': {
+      let c = 'git clone';
+      if (params.depth) c += ' --depth=' + params.depth;
+      c += ' ' + params.url;
+      if (params.dir) c += ' ' + params.dir;
+      cmd = c; break;
+    }
+    case 'status': cmd = 'git status'; break;
+    case 'add': {
+      let c = 'git add';
+      if (params.patch) c += ' -p';
+      if (params.files) c += ' ' + params.files;
+      cmd = c; break;
+    }
+    case 'rm': {
+      let c = 'git rm';
+      if (params.cached) c += ' --cached';
+      c += ' ' + params.files;
+      cmd = c; break;
+    }
+    case 'mv': cmd = 'git mv ' + params.source + ' ' + params.dest; break;
+
+    // branch
+    case 'branch': {
+      switch(params.action) {
+        case 'list': cmd = 'git branch'; break;
+        case 'create': cmd = 'git branch ' + params.name; break;
+        case 'delete': cmd = 'git branch -d ' + params.name; break;
+        case 'delete-force': cmd = 'git branch -D ' + params.name; break;
+        case 'rename': cmd = 'git branch -m ' + params.name + ' ' + params.newname; break;
+      }
+      break;
+    }
+    case 'checkout': {
+      if (params.create && params.newbranch) {
+        cmd = 'git switch -c ' + params.newbranch;
+      } else {
+        cmd = 'git switch ' + params.target;
+      }
+      break;
+    }
+    case 'merge': {
+      let c = 'git merge';
+      if (params['no-ff']) c += ' --no-ff';
+      if (params.squash) c += ' --squash';
+      if (params.msg) c += ' -m "' + params.msg + '"';
+      c += ' ' + params.branch;
+      cmd = c; break;
+    }
+    case 'rebase': {
+      let c = 'git rebase';
+      if (params.interactive) c += ' -i';
+      c += ' ' + params.onto;
+      cmd = c; break;
+    }
+
+    // remote
+    case 'remote-add': cmd = 'git remote add ' + params.name + ' ' + params.url; break;
+    case 'remote-remove': cmd = 'git remote remove ' + params.name; break;
+    case 'push': {
+      let c = 'git push';
+      if (params['set-upstream']) c += ' -u';
+      if (params.force) c += ' -f';
+      c += ' ' + params.remote;
+      if (params.branch) c += ' ' + params.branch;
+      cmd = c; break;
+    }
+    case 'pull': {
+      let c = 'git pull';
+      if (params.rebase) c += ' --rebase';
+      c += ' ' + params.remote;
+      if (params.branch) c += ' ' + params.branch;
+      cmd = c; break;
+    }
+    case 'fetch': {
+      let c = 'git fetch';
+      if (params.prune) c += ' --prune';
+      if (params.all) c += ' --all';
+      else if (params.remote) c += ' ' + params.remote;
+      cmd = c; break;
+    }
+    case 'remote-rename': cmd = 'git remote rename ' + params.old + ' ' + params.new; break;
+    case 'remote-url': cmd = 'git remote set-url ' + params.name + ' ' + params.url; break;
+
+    // commit
+    case 'commit': {
+      let c = 'git commit';
+      if (params.all) c += ' -a';
+      if (params.amend) c += ' --amend';
+      if (params.msg) c += ' -m "' + params.msg.replace(/"/g, '\\"') + '"';
+      if (params.amend && !params.msg) c += ' --no-edit';
+      cmd = c; break;
+    }
+    case 'log': {
+      let c = 'git log';
+      if (params.oneline) c += ' --oneline';
+      if (params.graph) c += ' --graph';
+      if (params.limit) c += ' -' + params.limit;
+      if (params.author) c += ' --author="' + params.author + '"';
+      if (params.all) c += ' --all';
+      cmd = c; break;
+    }
+    case 'show': {
+      let c = 'git show';
+      if (params.stat) c += ' --stat';
+      c += ' ' + params.commit;
+      cmd = c; break;
+    }
+    case 'shortlog': {
+      let c = 'git shortlog';
+      if (params.summary) c += ' -sn';
+      if (params.all) c += ' --all';
+      cmd = c; break;
+    }
+
+    // undo
+    case 'reset': cmd = 'git reset --' + params.mode + ' ' + params.target; break;
+    case 'revert': {
+      let c = 'git revert';
+      if (params['no-edit']) c += ' --no-edit';
+      c += ' ' + params.commit;
+      cmd = c; break;
+    }
+    case 'checkout-file': cmd = 'git checkout -- ' + params.files; break;
+    case 'restore': {
+      let c = 'git restore';
+      if (params.target === 'staged') c += ' --staged';
+      else if (params.target === 'source' && params.source) c += ' --source=' + params.source;
+      c += ' ' + params.files;
+      cmd = c; break;
+    }
+    case 'clean': {
+      let c = 'git clean';
+      if (params['dry-run']) c += ' -n';
+      if (params.force) c += ' -f';
+      if (params.dirs) c += ' -d';
+      if (!params.force && !params['dry-run']) c += ' -n'; // safe default
+      cmd = c; break;
+    }
+
+    // diff
+    case 'diff': {
+      let c = 'git diff';
+      if (params.staged) c += ' --staged';
+      if (params.words) c += ' --word-diff';
+      if (params.file) c += ' -- ' + params.file;
+      cmd = c; break;
+    }
+    case 'blame': cmd = 'git blame ' + params.file; break;
+    case 'diff-branch': {
+      let c = 'git diff';
+      if (params.stat) c += ' --stat';
+      c += ' ' + params.branch1 + '..' + params.branch2;
+      cmd = c; break;
+    }
+    case 'log-file': {
+      let c = 'git log';
+      if (params.follow) c += ' --follow';
+      c += ' -- ' + params.file;
+      cmd = c; break;
+    }
+
+    // stash
+    case 'stash-save': {
+      let c = 'git stash';
+      if (params['include-untracked']) c += ' -u';
+      if (params.msg) c += ' push -m "' + params.msg + '"';
+      cmd = c; break;
+    }
+    case 'stash-pop': cmd = 'git stash pop'; break;
+    case 'stash-apply': {
+      cmd = 'git stash apply';
+      if (params.stash) cmd += ' ' + params.stash;
+      break;
+    }
+    case 'stash-list': cmd = 'git stash list'; break;
+    case 'stash-drop': cmd = 'git stash drop ' + params.stash; break;
+    case 'stash-show': {
+      cmd = 'git stash show';
+      if (params.stash) cmd += ' ' + params.stash;
+      break;
+    }
+
+    // config
+    case 'config-user': {
+      let c = 'git config';
+      if (params.global) c += ' --global';
+      if (params.name && params.email) {
+        c += ' user.name "' + params.name + '" && ' + c + ' user.email "' + params.email + '"';
+      } else if (params.name) {
+        c += ' user.name "' + params.name + '"';
+      } else if (params.email) {
+        c += ' user.email "' + params.email + '"';
+      }
+      cmd = c; break;
+    }
+    case 'config-alias': cmd = 'git config' + (params.global ? ' --global' : '') + ' alias.' + params.alias + ' "' + params.command + '"'; break;
+    case 'config-list': cmd = 'git config --list'; break;
+    case 'config-edit': cmd = 'git config' + (params.global ? ' --global' : '') + ' --edit'; break;
+
+    // tag
+    case 'tag-list': cmd = 'git tag' + (params.pattern ? ' -l "' + params.pattern + '"' : ''); break;
+    case 'tag-create': {
+      let c = 'git tag -a ' + params.name + ' -m "' + (params.msg || '').replace(/"/g, '\\"') + '"';
+      if (params.commit) c += ' ' + params.commit;
+      cmd = c; break;
+    }
+    case 'tag-delete': cmd = 'git tag -d ' + params.name; break;
+    case 'tag-push': cmd = 'git push ' + params.remote + ' --tags'; break;
+
+    // advanced
+    case 'cherry-pick': {
+      let c = 'git cherry-pick';
+      if (params['no-commit']) c += ' -n';
+      c += ' ' + params.commit;
+      cmd = c; break;
+    }
+    case 'bisect-start': cmd = 'git bisect start ' + params.bad + ' ' + params.good; break;
+    case 'bisect-good': cmd = 'git bisect good'; break;
+    case 'bisect-bad': cmd = 'git bisect bad'; break;
+    case 'bisect-reset': cmd = 'git bisect reset'; break;
+    case 'submodule-add': {
+      cmd = 'git submodule add ' + params.url;
+      if (params.path) cmd += ' ' + params.path;
+      break;
+    }
+    case 'submodule-update': {
+      let c = 'git submodule update';
+      if (params.init) c += ' --init';
+      if (params.recursive) c += ' --recursive';
+      cmd = c; break;
+    }
+    case 'worktree-add': cmd = 'git worktree add ' + params.path + ' ' + params.branch; break;
+    case 'gc': {
+      let c = 'git gc';
+      if (params.aggressive) c += ' --aggressive';
+      if (params.prune) c += ' --prune=now';
+      cmd = c; break;
+    }
+    case 'archive': {
+      let c = 'git archive --format=' + params.format + ' --output=' + params.output;
+      if (params.ref) c += ' ' + params.ref;
+      c += ' HEAD';
+      cmd = c; break;
+    }
+  }
+
+  // 显示结果
+  document.getElementById('command-display').textContent = cmd || 'git (请填写参数)';
+  document.getElementById('command-desc').textContent = desc;
+  document.getElementById('result-area').classList.remove('hidden');
+}
+
+function copyCommand() {
+  const text = document.getElementById('command-display').textContent;
+  if (!text || text === 'git (请填写参数)') return;
+  navigator.clipboard.writeText(text).then(function() {
+    const btn = document.querySelector('#result-area button:first-child');
+    const orig = btn.textContent;
+    btn.textContent = '✅ 已复制';
+    setTimeout(function() { btn.textContent = orig; }, 2000);
+  }).catch(function() {
+    // fallback
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+  });
+}
+
+function resetAll() {
+  currentAction = null;
+  lastParams = {};
+  document.getElementById('params-area').classList.add('hidden');
+  document.getElementById('result-area').classList.add('hidden');
+  document.querySelectorAll('.action-btn').forEach(b => {
+    b.classList.remove('bg-blue-50', 'border-blue-300', 'text-blue-700');
+    b.classList.add('bg-white', 'border-gray-200', 'text-gray-700');
+  });
+}
+
+// ── 初始加载 ──
+selectCategory('basic');
+</script>
