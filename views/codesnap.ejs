@@ -19,42 +19,40 @@
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
         <div>
           <label class="block text-sm font-medium text-gray-700 mb-1">代码</label>
-          <textarea id="code-input" rows="8" class="w-full border border-gray-300 rounded-lg p-3 font-mono text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" placeholder="粘贴代码..." oninput="generateCard()">function hello() {
-        // console.log("Hello, World!");  // removed
+          <textarea id="code-input" rows="8" class="w-full border border-gray-300 rounded-lg p-3 font-mono text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" placeholder="粘贴代码..." oninput="renderCard()">function hello() {
+  console.log("Hello, World!");
 }</textarea>
         </div>
         <div>
           <label class="block text-sm font-medium text-gray-700 mb-2">预览</label>
-          <div id="card-preview" class="rounded-xl overflow-auto shadow-lg bg-gray-900 p-4 text-sm font-mono text-green-400 whitespace-pre-wrap" style="max-width:680px;max-height:400px"></div>
+          <canvas id="preview-canvas" width="680" height="300" class="w-full rounded-xl border border-gray-200" style="max-width:680px;max-height:500px"></canvas>
         </div>
       </div>
 
       <div class="flex flex-wrap gap-3 mb-4">
         <div>
           <label class="block text-xs font-medium text-gray-700 mb-1">主题</label>
-          <select id="theme-select" class="px-3 py-2 border border-gray-300 rounded-lg text-sm" onchange="generateCard()">
-            <option value="nord">Nord</option>
+          <select id="theme-select" class="px-3 py-2 border border-gray-300 rounded-lg text-sm" onchange="renderCard()">
             <option value="monokai" selected>Monokai</option>
-            <option value="dracula">Dracula</option>
+            <option value="nord">Nord</option>
+            <option value="darcula">Darcula</option>
             <option value="github">GitHub Light</option>
-            <option value="solarized">Solarized</option>
             <option value="one-dark">One Dark</option>
           </select>
         </div>
         <div>
           <label class="block text-xs font-medium text-gray-700 mb-1">背景</label>
-          <select id="bg-select" class="px-3 py-2 border border-gray-300 rounded-lg text-sm" onchange="generateCard()">
+          <select id="bg-select" class="px-3 py-2 border border-gray-300 rounded-lg text-sm" onchange="renderCard()">
             <option value="none">无</option>
-            <option value="gradient-blue">蓝紫渐变</option>
-            <option value="gradient-sunset" selected>日落渐变</option>
-            <option value="gradient-green">墨绿渐变</option>
-            <option value="gradient-pink">粉紫渐变</option>
-            <option value="carbon">Carbon 默认</option>
+            <option value="sunset" selected>日落渐变</option>
+            <option value="ocean">海洋渐变</option>
+            <option value="forest">森林渐变</option>
+            <option value="midnight">暗夜渐变</option>
           </select>
         </div>
         <div>
           <label class="block text-xs font-medium text-gray-700 mb-1">语言</label>
-          <select id="lang-select" class="px-3 py-2 border border-gray-300 rounded-lg text-sm" onchange="generateCard()">
+          <select id="lang-select" class="px-3 py-2 border border-gray-300 rounded-lg text-sm" onchange="renderCard()">
             <option value="js">JavaScript</option>
             <option value="py">Python</option>
             <option value="go">Go</option>
@@ -66,217 +64,327 @@
             <option value="sh">Shell</option>
           </select>
         </div>
-        <div>
-          <label class="block text-xs font-medium text-gray-700 mb-1">圆角</label>
-          <select id="radius-select" class="px-3 py-2 border border-gray-300 rounded-lg text-sm" onchange="generateCard()">
-            <option value="12">小</option>
-            <option value="20" selected>中</option>
-            <option value="32">大</option>
-          </select>
-        </div>
       </div>
 
       <div class="flex flex-wrap gap-2">
-        <button onclick="downloadCardPNG()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium">⬇️ 下载图片</button>
-        <button onclick="copyCardHTML()" class="px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 text-sm font-medium">📋 复制 HTML</button>
-        <button onclick="copyCardCSS()" class="px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 text-sm font-medium">📋 复制 CSS</button>
+        <button onclick="downloadPNG()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium">⬇️ 下载 PNG</button>
+        <button onclick="copyHTML()" class="px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 text-sm font-medium">📋 复制 HTML</button>
       </div>
     </div>
   </div>
 </div>
 
 <script>
+// ── Themes ──
 const THEMES = {
-  'nord':      { bg: '#2e3440', text: '#88c0d0', keyword: '#81a1c1', string:'#a3be8c', comment:'#616e88' },
-  'monokai':   { bg: '#272822', text: '#f8f8f2', keyword: '#f92672', string:'#e6db74', comment:'#75715e' },
-  'dracula':   { bg: '#282a36', text: '#f8f8f2', keyword: '#ff79c6', string:'#f1fa8c', comment:'#6272a4' },
-  'github':    { bg: '#ffffff', text: '#24292e', keyword: '#d73a49', string:'#032f62', comment:'#6a737d' },
-  'solarized': { bg: '#002b36', text: '#839496', keyword: '#859900', string:'#2aa198', comment:'#586e75' },
-  'one-dark':  { bg: '#1e1e2e', text: '#cdd6f4', keyword: '#cba6f7', string:'#a6e3a1', comment:'#6c7086' },
+  monokai:  { bg:'#272822', fg:'#f8f8f2', kw:'#f92672', str:'#e6db74', cmt:'#75715e' },
+  nord:     { bg:'#2e3440', fg:'#d8dee9', kw:'#81a1c1', str:'#a3be8c', cmt:'#4c566a' },
+  darcula:  { bg:'#2b2b2b', fg:'#a9b7c6', kw:'#cc7832', str:'#6a8759', cmt:'#808080' },
+  github:   { bg:'#ffffff', fg:'#24292e', kw:'#d73a49', str:'#032f62', cmt:'#6a737d' },
+  'one-dark':{bg:'#282c34',fg:'#abb2bf',kw:'#c678dd',str:'#98c379',cmt:'#5c6370'},
 };
 
 const GRADIENTS = {
-  'none':             '',
-  'gradient-blue':    'linear-gradient(135deg, #1a1a2e, #16213e, #0f3460)',
-  'gradient-sunset':  'linear-gradient(135deg, #fc5c7d, #6a82fb)',
-  'gradient-green':   'linear-gradient(135deg, #0b3a2d, #1b6b4a, #2d8a5a)',
-  'gradient-pink':    'linear-gradient(135deg, #4a1a3a, #7a2a5a, #b84a7a)',
-  'carbon':           'linear-gradient(135deg, #1e1e1e, #2a2a2a)',
+  none:     { type:'solid', color:'#1e1e1e' },
+  sunset:   { type:'grad', colors:['#fc5c7d','#6a82fb'] },
+  ocean:    { type:'grad', colors:['#0f2027','#203a43','#2c5364'] },
+  forest:   { type:'grad', colors:['#134e5e','#71b280'] },
+  midnight: { type:'grad', colors:['#1a1a2e','#16213e','#0f3460'] },
 };
 
-function generateCard() {
-  const code = document.getElementById('code-input').value;
-  const themeName = document.getElementById('theme-select').value;
-  const bgName = document.getElementById('bg-select').value;
-  const radius = document.getElementById('radius-select').value;
-  const lang = document.getElementById('lang-select').value;
+// ── Keywords by language ──
+const KEYWORDS = {
+  js:   new Set(['function','return','const','let','var','if','else','for','while','class','import','export','from','default','async','await','try','catch','throw','new','this','true','false','null','undefined','typeof','in','of','switch','case','break','continue']),
+  py:   new Set(['def','return','if','else','elif','for','while','import','from','class','self','True','False','None','try','except','raise','with','as','in','not','and','or','lambda','yield','pass','break','continue']),
+  go:   new Set(['func','return','if','else','for','range','var','type','struct','interface','import','package','defer','go','chan','map','nil','true','false','make','append','len']),
+  rs:   new Set(['fn','let','mut','return','if','else','for','while','match','struct','enum','impl','trait','pub','use','mod','self','true','false','Some','None','Ok','Err','as','in','ref']),
+  java: new Set(['public','private','protected','static','final','class','interface','enum','extends','implements','return','if','else','for','while','new','this','null','true','false','void','int','String','boolean','try','catch','throw','import','package']),
+  ts:   new Set(['function','return','const','let','var','if','else','for','while','class','import','export','from','default','async','await','interface','type','extends','implements','new','this','true','false','null','undefined','enum']),
+  html: new Set([]),
+  css:  new Set([]),
+  sh:   new Set(['if','then','else','fi','for','do','done','while','function','return','export','local','echo','exit','source']),
+};
 
-  const theme = THEMES[themeName];
-  const gradient = GRADIENTS[bgName];
-
-  const escaped = escapeHtml(code);
-  const highlighted = highlightCode(escaped, theme, lang);
-
-  const bgStyle = gradient ? `background: ${gradient}; padding: 32px;` : '';
-  const cardBg = gradient ? 'rgba(0,0,0,0.3)' : theme.bg;
-
-  const html = `<div style="${bgStyle}display:flex;justify-content:center;align-items:center;font-family:'SF Mono','Fira Code','JetBrains Mono',monospace;">
-  <div style="background:${cardBg};border-radius:${radius}px;padding:24px 24px 8px;max-width:680px;width:100%;backdrop-filter:blur(4px);box-shadow:0 20px 60px rgba(0,0,0,0.3);">
-    <div style="display:flex;gap:8px;margin-bottom:16px;">
-      <span style="width:12px;height:12px;border-radius:50%;background:#ff5f57;"></span>
-      <span style="width:12px;height:12px;border-radius:50%;background:#febc2e;"></span>
-      <span style="width:12px;height:12px;border-radius:50%;background:#28c840;"></span>
-      <span style="flex:1;"></span>
-      <span style="color:rgba(255,255,255,0.3);font-size:11px;font-family:monospace;">${lang.toUpperCase()}</span>
-    </div>
-    <pre style="color:${theme.text};font-size:13px;line-height:1.6;overflow-x:auto;padding-bottom:16px;margin:0;white-space:pre-wrap;word-break:break-all"><code>${highlighted}</code></pre>
-  </div>
-</div>`.trim();
-
-  document.getElementById('card-preview').innerHTML = html;
+// ── Tokenise code into coloured spans ──
+function tokenise(code, lang) {
+  var kw = KEYWORDS[lang] || new Set();
+  var tokens = [];
+  var i = 0;
+  while (i < code.length) {
+    // String literals
+    if (code[i] === '"' || code[i] === "'" || code[i] === '`') {
+      var q = code[i], s = q; i++;
+      while (i < code.length && code[i] !== q) { if (code[i] === '\\') { s += code[i] + (code[i+1]||''); i+=2; } else { s += code[i]; i++; } }
+      s += code[i]||''; i++;
+      tokens.push({ t:'str', v:s }); continue;
+    }
+    // Single-line comment
+    if (code[i] === '/' && code[i+1] === '/') {
+      var c = '//'; i+=2;
+      while (i < code.length && code[i] !== '\n') { c += code[i]; i++; }
+      tokens.push({ t:'cmt', v:c }); continue;
+    }
+    // Block comment
+    if (code[i] === '/' && code[i+1] === '*') {
+      var c = '/*'; i+=2;
+      while (i < code.length && !(code[i] === '*' && code[i+1] === '/')) { c += code[i]; i++; }
+      c += '*/'; i+=2;
+      tokens.push({ t:'cmt', v:c }); continue;
+    }
+    // Python/shell comment
+    if (code[i] === '#' && (lang === 'py' || lang === 'sh')) {
+      var c = '#'; i++;
+      while (i < code.length && code[i] !== '\n') { c += code[i]; i++; }
+      tokens.push({ t:'cmt', v:c }); continue;
+    }
+    // Number literals
+    if (/[0-9]/.test(code[i]) && (i===0 || /[\s\(\{\[\,\=\+\-\*\/\%\&\|\<\>\:;]/.test(code[i-1]))) {
+      var n = '';
+      while (i < code.length && /[0-9\.xXa-fA-f]/.test(code[i])) { n += code[i]; i++; }
+      tokens.push({ t:'num', v:n }); continue;
+    }
+    // Identifiers / keywords
+    if (/[a-zA-Z_$]/.test(code[i])) {
+      var w = '';
+      while (i < code.length && /[a-zA-Z0-9_$]/.test(code[i])) { w += code[i]; i++; }
+      if (kw.has(w)) tokens.push({ t:'kw', v:w });
+      else tokens.push({ t:'txt', v:w });
+      continue;
+    }
+    // Whitespace
+    if (code[i] === ' ' || code[i] === '\t' || code[i] === '\n') {
+      tokens.push({ t:'ws', v:code[i] }); i++; continue;
+    }
+    tokens.push({ t:'txt', v:code[i] }); i++;
+  }
+  return tokens;
 }
 
-function highlightCode(code, theme) {
-  // Simple keyword-based syntax highlight
-  const keywords = {
-    js:   ['function','return','const','let','var','if','else','for','while','class','import','export','from','default','async','await','try','catch','throw','new','this','true','false','null','undefined','typeof'],
-    py:   ['def','return','if','else','elif','for','while','import','from','class','self','True','False','None','try','except','raise','with','as','in','not','and','or','lambda','yield'],
-    go:   ['func','return','if','else','for','range','var','type','struct','interface','import','package','defer','go','chan','map','nil','true','false','make','append','len'],
-    rs:   ['fn','let','mut','return','if','else','for','while','match','struct','enum','impl','trait','pub','use','mod','self','true','false','Some','None','Ok','Err','as','in','ref'],
-    java: ['public','private','protected','static','final','class','interface','enum','extends','implements','return','if','else','for','while','new','this','null','true','false','void','int','String','boolean','try','catch','throw','import','package'],
-    ts:   ['function','return','const','let','var','if','else','for','while','class','import','export','from','default','async','await','interface','type','extends','implements','new','this','true','false','null','undefined','enum'],
-    html: [],
-    css:  [],
-    sh:   ['if','then','else','fi','for','do','done','while','function','return','export','local','echo','exit','source'],
-  };
+// ── Measure text width ──
+var _canvas = document.createElement('canvas');
+var _ctx = _canvas.getContext('2d');
+function measureText(font, text) {
+  _ctx.font = font;
+  return _ctx.measureText(text).width;
+}
 
-  const kw = keywords[document.getElementById('lang-select').value] || [];
-  const kwSet = new Set(kw);
+// ── Render card on canvas ──
+var CARD_W = 680;
+var PAD_X = 24, PAD_Y = 18;
+var LINE_H = 20; // line height
+var FONT = '13px "SF Mono", "Fira Code", "Consolas", monospace';
+var FONT_BOLD = 'bold 13px "SF Mono", "Fira Code", "Consolas", monospace';
+var TAB_W = 8;
 
-  // Highlight strings (between quotes)
-  let h = '';
-  let i = 0;
-  while (i < code.length) {
-    if (code[i] === '"' || code[i] === "'" || code[i] === '`') {
-      const quote = code[i];
-      let s = quote;
-      i++;
-      while (i < code.length && code[i] !== quote) {
-        if (code[i] === '\\') { s += '\\' + (code[i+1]||''); i+=2; continue; }
-        s += code[i]; i++;
-      }
-      s += quote; i++;
-      h += `<span style="color:${theme.string}">${s}</span>`;
-    } else if (/[a-zA-Z_$]/.test(code[i])) {
-      let word = '';
-      while (i < code.length && /[a-zA-Z0-9_$]/.test(code[i])) { word += code[i]; i++; }
-      if (kwSet.has(word)) h += `<span style="color:${theme.keyword};font-weight:500">${word}</span>`;
-      else h += word;
-    } else if (code[i] === '/' && code[i+1] === '/') {
-      let s = '//';
-      i += 2;
-      while (i < code.length && code[i] !== '\n') { s += code[i]; i++; }
-      h += `<span style="color:${theme.comment};font-style:italic">${s}</span>`;
-    } else if (code[i] === '/' && code[i+1] === '*') {
-      let s = '/*';
-      i += 2;
-      while (i < code.length && !(code[i] === '*' && code[i+1] === '/')) { s += code[i]; i++; }
-      s += '*/'; i += 2;
-      h += `<span style="color:${theme.comment};font-style:italic">${s}</span>`;
-    } else if (code[i] === '#' && ['py','sh'].includes(document.getElementById('lang-select').value)) {
-      let s = '#';
-      i++;
-      while (i < code.length && code[i] !== '\n') { s += code[i]; i++; }
-      h += `<span style="color:${theme.comment};font-style:italic">${s}</span>`;
+function wrapLines(font, text) {
+  var lines = [];
+  var cur = '';
+  var maxW = CARD_W - PAD_X * 2 - 16; // inner content width
+  _ctx.font = font;
+  for (var i = 0; i < text.length; i++) {
+    var ch = text[i];
+    if (ch === '\t') ch = ' '.repeat(TAB_W);
+    var test = cur + ch;
+    if (_ctx.measureText(test).width > maxW && cur.length > 0) {
+      lines.push(cur);
+      cur = ch;
     } else {
-      h += code[i]; i++;
+      cur = test;
     }
   }
-  return h;
+  if (cur) lines.push(cur);
+  return lines;
 }
 
-function escapeHtml(s) {
-  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-}
+function renderCard() {
+  var code = document.getElementById('code-input').value;
+  var themeName = document.getElementById('theme-select').value;
+  var bgName = document.getElementById('bg-select').value;
+  var lang = document.getElementById('lang-select').value;
+  var theme = THEMES[themeName];
+  var bg = GRADIENTS[bgName];
 
-function downloadCardPNG() {
-  // Clone the card and render off-screen at exact size
-  var preview = document.getElementById('card-preview');
-  var cardEl = preview.firstElementChild;
-  if (!cardEl) return;
+  // Tokenise code
+  var tokens = tokenise(code, lang);
 
-  // Clone the entire card element into an offscreen container
-  var clone = cardEl.cloneNode(true);
-  var wrapper = document.createElement('div');
-  wrapper.style.cssText = 'position:absolute;left:-9999px;top:0;width:' + (cardEl.offsetWidth || 640) + 'px;';
-  wrapper.appendChild(clone);
-  document.body.appendChild(wrapper);
-
-  setTimeout(function() {
-    // Use html2canvas if available, otherwise fallback
-    if (typeof html2canvas !== 'undefined') {
-      html2canvas(clone, {
-        scale: 2,
-        useCORS: true,
-        backgroundColor: null,
-        logging: false
-      }).then(function(canvas) {
-        var link = document.createElement('a');
-        link.download = 'code-snippet.png';
-        link.href = canvas.toDataURL('image/png');
-        link.click();
-        document.body.removeChild(wrapper);
-      }).catch(function(err) {
-        console.error(err);
-        document.body.removeChild(wrapper);
-      });
-    } else {
-      // Fallback: inline SVG render
-      var svg = '<svg xmlns="http://www.w3.org/2000/svg" width="' + (clone.scrollWidth || 680) + '" height="' + (clone.scrollHeight || 400) + '">' +
-        '<foreignObject width="100%" height="100%"><div xmlns="http://www.w3.org/1999/xhtml">' +
-        clone.innerHTML.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;') +
-        '</div></foreignObject></svg>';
-      var img = new Image();
-      var blob = new Blob([svg], {type: 'image/svg+xml;charset=utf-8'});
-      var url = URL.createObjectURL(blob);
-      img.onload = function() {
-        var c = document.createElement('canvas');
-        c.width = img.naturalWidth;
-        c.height = img.naturalHeight;
-        c.getContext('2d').drawImage(img, 0, 0);
-        var link = document.createElement('a');
-        link.download = 'code-snippet.png';
-        link.href = c.toDataURL('image/png');
-        link.click();
-        URL.revokeObjectURL(url);
-        document.body.removeChild(wrapper);
-      };
-      img.src = url;
+  // Build coloured lines (each line is array of {text, color, bold?})
+  var colouredLines = [];
+  var curLine = [];
+  for (var t = 0; t < tokens.length; t++) {
+    var tok = tokens[t];
+    var color, bold;
+    switch (tok.t) {
+      case 'kw': color = theme.kw; bold = true; break;
+      case 'str': color = theme.str; break;
+      case 'cmt': color = theme.cmt; break;
+      case 'num': color = '#a6e22e'; break;
+      case 'txt': color = theme.fg; break;
+      case 'ws': color = null; break;
+      default: color = theme.fg;
     }
-  }, 100);
+    var chars = tok.v.split('');
+    for (var c = 0; c < chars.length; c++) {
+      if (chars[c] === '\n') {
+        colouredLines.push(curLine);
+        curLine = [];
+      } else {
+        curLine.push({ ch: chars[c], color: color, bold: bold || false });
+      }
+    }
+  }
+  if (curLine.length > 0) colouredLines.push(curLine);
+
+  // Wrap long lines
+  var displayLines = [];
+  for (var li = 0; li < colouredLines.length; li++) {
+    var line = colouredLines[li];
+    // Build flat text for wrapping check
+    var flat = line.map(function(s) { return s.ch; }).join('');
+    var wrapped = wrapLines(FONT, flat);
+    if (wrapped.length <= 1) {
+      displayLines.push(line);
+    } else {
+      var ptr = 0;
+      for (var w = 0; w < wrapped.length; w++) {
+        var sub = [];
+        var wlen = 0;
+        while (ptr < line.length && wlen < wrapped[w].length) {
+          sub.push(line[ptr]);
+          wlen += line[ptr].ch.length;
+          ptr++;
+        }
+        displayLines.push(sub);
+      }
+    }
+  }
+
+  // Calculate canvas height
+  var headerH = 16 + 10; // top bar height
+  var footerH = 8;
+  var contentH = displayLines.length * LINE_H;
+  var canvasH = PAD_Y + headerH + contentH + footerH + PAD_Y;
+  if (canvasH < 120) canvasH = 120;
+  if (canvasH > 2000) canvasH = 2000;
+
+  var canvas = document.getElementById('preview-canvas');
+  canvas.width = CARD_W;
+  canvas.height = canvasH;
+  var ctx = canvas.getContext('2d');
+
+  // ── Background ──
+  if (bg.type === 'grad') {
+    var grad = ctx.createLinearGradient(0, 0, CARD_W, canvasH);
+    for (var g = 0; g < bg.colors.length; g++) {
+      grad.addColorStop(g / (bg.colors.length - 1 || 1), bg.colors[g]);
+    }
+    ctx.fillStyle = grad;
+  } else {
+    ctx.fillStyle = bg.color;
+  }
+  ctx.fillRect(0, 0, CARD_W, canvasH);
+
+  // ── Card ──
+  var cardX = PAD_X, cardY = PAD_Y;
+  var cardW = CARD_W - PAD_X * 2;
+  var cardH = canvasH - PAD_Y * 2;
+  var radius = 16;
+
+  // Shadow
+  ctx.shadowColor = 'rgba(0,0,0,0.3)';
+  ctx.shadowBlur = 30;
+  ctx.shadowOffsetY = 8;
+  ctx.beginPath();
+  ctx.roundRect(cardX, cardY, cardW, cardH, radius);
+  ctx.fillStyle = theme.bg;
+  ctx.fill();
+  ctx.shadowColor = 'transparent';
+  ctx.shadowBlur = 0;
+  ctx.shadowOffsetY = 0;
+
+  // Card background
+  ctx.beginPath();
+  ctx.roundRect(cardX, cardY, cardW, cardH, radius);
+  ctx.fillStyle = theme.bg;
+  ctx.fill();
+
+  // ── Traffic lights ──
+  var dotY = cardY + 14;
+  var dotX = cardX + 16;
+  ctx.beginPath(); ctx.arc(dotX, dotY, 6, 0, Math.PI * 2); ctx.fillStyle = '#ff5f57'; ctx.fill();
+  ctx.beginPath(); ctx.arc(dotX + 18, dotY, 6, 0, Math.PI * 2); ctx.fillStyle = '#febc2e'; ctx.fill();
+  ctx.beginPath(); ctx.arc(dotX + 36, dotY, 6, 0, Math.PI * 2); ctx.fillStyle = '#28c840'; ctx.fill();
+
+  // Language label
+  ctx.font = '11px monospace';
+  ctx.fillStyle = 'rgba(255,255,255,0.25)';
+  ctx.textAlign = 'right';
+  ctx.fillText(lang.toUpperCase(), cardX + cardW - 14, dotY + 4);
+
+  // ── Code lines ──
+  ctx.textAlign = 'left';
+  var codeY = cardY + 40 + 14; // baseline of first line
+  for (var li = 0; li < displayLines.length; li++) {
+    var line = displayLines[li];
+    var x = cardX + 16;
+    for (var si = 0; si < line.length; si++) {
+      var span = line[si];
+      if (span.ch === '\t') {
+        ctx.fillText('        ', x, codeY);
+        x += _ctx.measureText('        ').width;
+        continue;
+      }
+      ctx.font = span.bold ? FONT_BOLD : FONT;
+      ctx.fillStyle = span.color || theme.fg;
+      ctx.fillText(span.ch, x, codeY);
+      x += _ctx.measureText(span.ch).width;
+    }
+    codeY += LINE_H;
+  }
+
+  // ── Update download canvas reference ──
+  window._codeCanvas = canvas;
 }
 
-function copyCardHTML() {
-  const html = document.getElementById('card-preview').innerHTML;
-  navigator.clipboard.writeText(html).then(() => {
-    const btn = document.querySelector('[onclick^="copyCardHTML"]');
+// roundRect polyfill for canvas
+if (!CanvasRenderingContext2D.prototype.roundRect) {
+  CanvasRenderingContext2D.prototype.roundRect = function(x, y, w, h, r) {
+    if (r > w/2) r = w/2;
+    if (r > h/2) r = h/2;
+    this.moveTo(x + r, y);
+    this.lineTo(x + w - r, y);
+    this.quadraticCurveTo(x + w, y, x + w, y + r);
+    this.lineTo(x + w, y + h - r);
+    this.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+    this.lineTo(x + r, y + h);
+    this.quadraticCurveTo(x, y + h, x, y + h - r);
+    this.lineTo(x, y + r);
+    this.quadraticCurveTo(x, y, x + r, y);
+    return this;
+  };
+}
+
+// ── Download ──
+function downloadPNG() {
+  var canvas = window._codeCanvas;
+  if (!canvas || canvas.width === 0) return;
+  var link = document.createElement('a');
+  link.download = 'code-snippet.png';
+  link.href = canvas.toDataURL('image/png');
+  link.click();
+}
+
+// ── Copy HTML ──
+function copyHTML() {
+  var canvas = window._codeCanvas;
+  if (!canvas) return;
+  var dataUrl = canvas.toDataURL('image/png');
+  var html = '<div style="max-width:680px">\n  <img src="' + dataUrl + '" style="max-width:100%;height:auto" alt="Code Snippet"/>\n</div>';
+  navigator.clipboard.writeText(html).then(function() {
+    var btn = document.querySelector('[onclick^="copyHTML"]');
     btn.textContent = '✅ 已复制';
-    setTimeout(() => btn.textContent = '📋 复制 HTML', 1500);
-  })
-      .catch(function(err) { console.error(err); });;
+    setTimeout(function() { btn.textContent = '📋 复制 HTML'; }, 1500);
+  });
 }
 
-function copyCardCSS() {
-  const el = document.getElementById('card-preview').firstElementChild;
-  const styles = window.getComputedStyle(el);
-  let css = `/* Code Card Styles */\nbackground: ${styles.background};\nborder-radius: ${styles.borderRadius};\npadding: 24px;\nfont-family: 'SF Mono', 'Fira Code', monospace;\n`;
-  navigator.clipboard.writeText(css).then(() => {
-    const btn = document.querySelector('[onclick^="copyCardCSS"]');
-    btn.textContent = '✅ 已复制';
-    setTimeout(() => btn.textContent = '📋 复制 CSS', 1500);
-  })
-      .catch(function(err) { console.error(err); });;
-}
-
-generateCard();
+renderCard();
 </script>
