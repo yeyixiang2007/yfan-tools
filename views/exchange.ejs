@@ -1,0 +1,195 @@
+<%- /* content block for layout */ '' %>
+<% var content = ''; %>
+
+<div>
+  <div class="mb-6">
+    <a href="/" class="text-sm text-blue-500 hover:text-blue-700">&larr; 返回首页</a>
+  </div>
+
+  <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 md:p-8">
+    <div class="flex items-center gap-3 mb-4">
+      <span class="text-3xl"><%- tool.icon %></span>
+      <div>
+        <h1 class="text-2xl font-bold text-gray-800"><%- tool.name %></h1>
+        <p class="text-sm text-gray-500"><%- tool.desc %></p>
+      </div>
+    </div>
+
+    <div class="border-t border-gray-100 pt-6 mt-2">
+      <div class="flex flex-wrap gap-2 mb-4">
+        <button onclick="refreshRates()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium">🔄 刷新汇率</button>
+        <button onclick="swapCurrencies()" class="px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 text-sm font-medium">⇄ 互换</button>
+        <button onclick="clearAll()" class="px-4 py-2 bg-white border border-gray-300 text-gray-500 rounded-lg hover:bg-gray-50 text-sm font-medium">清空</button>
+      </div>
+
+      <div class="grid grid-cols-2 gap-4 mb-4">
+        <div>
+          <label class="block text-xs font-medium text-gray-700 mb-1">金额</label>
+          <input id="fx-amount" type="number" value="1" min="0" step="any" oninput="convert()" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-gray-700 mb-1">从</label>
+          <select id="fx-from" onchange="convert()" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"></select>
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-gray-700 mb-1">到</label>
+          <select id="fx-to" onchange="convert()" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"></select>
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-gray-700 mb-1">结果</label>
+          <div id="fx-result" class="w-full px-3 py-2 bg-blue-50 border border-blue-200 rounded-lg text-lg font-bold text-blue-700"></div>
+        </div>
+      </div>
+
+      <div class="mb-2 text-sm">
+        <span class="text-gray-500">汇率来源: </span>
+        <a href="https://exchangerate.host" target="_blank" class="text-blue-500 hover:text-blue-700">exchangerate.host</a>
+        <span class="text-xs text-gray-400 ml-2" id="fx-updated"></span>
+      </div>
+
+      <div class="mt-4">
+        <h3 class="text-sm font-medium text-gray-700 mb-2">📊 参考汇率表</h3>
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead>
+              <tr class="bg-gray-50">
+                <th class="text-left px-3 py-2 text-gray-600 font-medium">货币</th>
+                <th class="text-left px-3 py-2 text-gray-600 font-medium">代码</th>
+                <th class="text-right px-3 py-2 text-gray-600 font-medium">兑 USD</th>
+              </tr>
+            </thead>
+            <tbody id="rate-table"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const CURRENCIES = [
+  {code:'USD', name:'美元', symbol:'$'},
+  {code:'CNY', name:'人民币', symbol:'¥'},
+  {code:'EUR', name:'欧元', symbol:'€'},
+  {code:'GBP', name:'英镑', symbol:'£'},
+  {code:'JPY', name:'日元', symbol:'¥'},
+  {code:'KRW', name:'韩元', symbol:'₩'},
+  {code:'HKD', name:'港币', symbol:'HK$'},
+  {code:'TWD', name:'新台币', symbol:'NT$'},
+  {code:'SGD', name:'新加坡元', symbol:'S$'},
+  {code:'CAD', name:'加元', symbol:'CA$'},
+  {code:'AUD', name:'澳元', symbol:'A$'},
+  {code:'CHF', name:'瑞士法郎', symbol:'Fr'},
+  {code:'THB', name:'泰铢', symbol:'฿'},
+  {code:'INR', name:'印度卢比', symbol:'₹'},
+  {code:'MYR', name:'马来西亚令吉', symbol:'RM'},
+  {code:'VND', name:'越南盾', symbol:'₫'},
+  {code:'PHP', name:'菲律宾比索', symbol:'₱'},
+  {code:'IDR', name:'印尼盾', symbol:'Rp'},
+  {code:'RUB', name:'俄罗斯卢布', symbol:'₽'},
+  {code:'BRL', name:'巴西雷亚尔', symbol:'R$'},
+];
+
+let rates = {};
+let lastUpdated = '';
+
+function init() {
+  const fromSel = document.getElementById('fx-from');
+  const toSel = document.getElementById('fx-to');
+  CURRENCIES.forEach(c => {
+    fromSel.add(new Option(`${c.symbol} ${c.code} - ${c.name}`, c.code));
+    toSel.add(new Option(`${c.symbol} ${c.code} - ${c.name}`, c.code));
+  });
+  toSel.value = 'CNY';
+  refreshRates();
+}
+
+async function refreshRates() {
+  const btn = document.querySelector('[onclick^="refreshRates"]');
+  btn.textContent = '⏳ 加载中...';
+  btn.disabled = true;
+
+  try {
+    const resp = await fetch(`https://api.exchangerate.host/latest?base=USD&symbols=${CURRENCIES.map(c=>c.code).join(',')}&source=ecb`);
+    const data = await resp.json();
+    if (data.success || data.rates) {
+      rates = data.rates;
+      const now = new Date();
+      lastUpdated = now.toLocaleString('zh-CN');
+      document.getElementById('fx-updated').textContent = `更新于 ${lastUpdated}`;
+      renderRateTable();
+      convert();
+    } else {
+      throw new Error('API error');
+    }
+  } catch(e) {
+    // fallback: 使用近似固定汇率
+    rates = {
+      USD:1, CNY:7.24, EUR:0.92, GBP:0.79, JPY:151.5, KRW:1325,
+      HKD:7.82, TWD:32.0, SGD:1.34, CAD:1.36, AUD:1.52, CHF:0.88,
+      THB:36.0, INR:83.2, MYR:4.72, VND:25455, PHP:56.2, IDR:16150,
+      RUB:92.5, BRL:5.02
+    };
+    document.getElementById('fx-updated').textContent = '离线模式（近似汇率）';
+    renderRateTable();
+    convert();
+  }
+
+  btn.textContent = '🔄 刷新汇率';
+  btn.disabled = false;
+}
+
+function convert() {
+  const amount = parseFloat(document.getElementById('fx-amount').value) || 0;
+  const from = document.getElementById('fx-from').value;
+  const to = document.getElementById('fx-to').value;
+  const result = document.getElementById('fx-result');
+
+  if (!rates[from] || !rates[to]) {
+    result.textContent = '—';
+    return;
+  }
+
+  // rates are relative to USD
+  const usdAmount = amount / rates[from];
+  const converted = usdAmount * rates[to];
+  result.textContent = formatCurrency(converted, to);
+}
+
+function swapCurrencies() {
+  const from = document.getElementById('fx-from');
+  const to = document.getElementById('fx-to');
+  const tmp = from.value; from.value = to.value; to.value = tmp;
+  convert();
+}
+
+function renderRateTable() {
+  const tbody = document.getElementById('rate-table');
+  tbody.innerHTML = CURRENCIES.map(c =>
+    `<tr class="border-b border-gray-100 hover:bg-gray-50">
+      <td class="px-3 py-2">${c.symbol} ${c.name}</td>
+      <td class="px-3 py-2 font-mono text-gray-600">${c.code}</td>
+      <td class="px-3 py-2 text-right font-mono">${rates[c.code] ? rates[c.code].toFixed(4) : '—'}</td>
+    </tr>`
+  ).join('');
+}
+
+function formatCurrency(val, code) {
+  const c = CURRENCIES.find(c => c.code === code);
+  const locales = {CNY:'zh-CN',JPY:'ja-JP',KRW:'ko-KR',VND:'vi-VN',IDR:'id-ID',RUB:'ru-RU',BRL:'pt-BR'};
+  try {
+    return new Intl.NumberFormat(locales[code] || 'en-US', {
+      style: 'currency', currency: code, minimumFractionDigits: 2, maximumFractionDigits: 2
+    }).format(val);
+  } catch {
+    return `${c?.symbol || ''} ${val.toFixed(2)}`;
+  }
+}
+
+function clearAll() {
+  document.getElementById('fx-amount').value = '';
+  document.getElementById('fx-result').textContent = '';
+}
+
+init();
+</script>
