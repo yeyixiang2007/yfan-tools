@@ -85,6 +85,7 @@ const tools = [
   { id: 'palindrome',name: '回文检测',             desc: '回文字符串检测工具，支持中文',          icon: '🔄', category: 'text' },
   { id: 'anagram',   name: '字谜检测',             desc: 'Anagram 字谜检测与全文查找',            icon: '🔀', category: 'text' },
   { id: 'wordcount', name: '词频统计',             desc: '字符/单词/句子统计 + 词频可视化排行榜', icon: '📈', category: 'text' },
+  { id: 'palette',  name: '配色提取',           desc: '从图片中提取配色方案',                    icon: '🎨', category: 'media' },
   { id: 'speedtest', name: '网速测试',           desc: '浏览器测速，测试下载/上传/Ping',         icon: '⚡', category: 'info' },
   { id: 'git',       name: 'Git 命令生成器',        desc: '交互式生成 Git 命令，支持分支/提交/远程等', icon: '🔧', category: 'dev' },
 ]
