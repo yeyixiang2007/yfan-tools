@@ -1,0 +1,149 @@
+<%- /* content block for layout */ '' %>
+<% var content = ''; %>
+
+<div>
+  <div class="mb-6">
+    <a href="/" class="text-sm text-blue-500 hover:text-blue-700">&larr; 返回首页</a>
+  </div>
+
+  <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 md:p-8">
+    <div class="flex items-center gap-3 mb-4">
+      <span class="text-3xl"><%- tool.icon %></span>
+      <div>
+        <h1 class="text-2xl font-bold text-gray-800"><%- tool.name %></h1>
+        <p class="text-sm text-gray-500"><%- tool.desc %></p>
+      </div>
+    </div>
+
+    <div class="border-t border-gray-100 pt-6 mt-2">
+      <div class="mb-6">
+        <input id="port-input" type="number" min="1" max="65535" value="80"
+               class="w-full max-w-xs px-4 py-2 border border-gray-300 rounded-lg font-mono text-lg text-center focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+               oninput="lookupPort()">
+      </div>
+
+      <div id="port-result" class="space-y-2">
+        <div id="port-info" class="p-4 bg-blue-50 border border-blue-100 rounded-lg">
+          <div class="text-xs text-gray-500 mb-1">端口号</div>
+          <div class="text-2xl font-mono font-bold text-gray-800" id="port-number">80</div>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3" id="port-details"></div>
+      </div>
+
+      <div class="mt-6">
+        <h3 class="text-sm font-medium text-gray-700 mb-2">📋 常用端口速查</h3>
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs" id="port-well-known"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const PORT_DATA = {
+  20: { name: 'FTP Data', proto: 'TCP', desc: '文件传输协议（数据）' },
+  21: { name: 'FTP', proto: 'TCP', desc: '文件传输协议（控制）' },
+  22: { name: 'SSH', proto: 'TCP', desc: '安全外壳协议' },
+  23: { name: 'Telnet', proto: 'TCP', desc: '远程登录' },
+  25: { name: 'SMTP', proto: 'TCP', desc: '简单邮件传输协议' },
+  53: { name: 'DNS', proto: 'TCP/UDP', desc: '域名系统' },
+  67: { name: 'DHCP', proto: 'UDP', desc: '动态主机配置（服务端）' },
+  68: { name: 'DHCP', proto: 'UDP', desc: '动态主机配置（客户端）' },
+  69: { name: 'TFTP', proto: 'UDP', desc: '简单文件传输协议' },
+  80: { name: 'HTTP', proto: 'TCP', desc: '超文本传输协议' },
+  110: { name: 'POP3', proto: 'TCP', desc: '邮局协议 v3' },
+  123: { name: 'NTP', proto: 'UDP', desc: '网络时间协议' },
+  137: { name: 'NetBIOS', proto: 'TCP/UDP', desc: 'NetBIOS 名称服务' },
+  143: { name: 'IMAP', proto: 'TCP', desc: '互联网消息访问协议' },
+  161: { name: 'SNMP', proto: 'UDP', desc: '简单网络管理协议' },
+  194: { name: 'IRC', proto: 'TCP', desc: '互联网中继聊天' },
+  389: { name: 'LDAP', proto: 'TCP', desc: '轻量级目录访问协议' },
+  443: { name: 'HTTPS', proto: 'TCP', desc: 'HTTP over TLS/SSL' },
+  445: { name: 'SMB', proto: 'TCP', desc: 'SMB 文件共享' },
+  465: { name: 'SMTPS', proto: 'TCP', desc: 'SMTP over SSL' },
+  500: { name: 'IPSec', proto: 'UDP', desc: 'IPSec 密钥交换' },
+  514: { name: 'Syslog', proto: 'UDP', desc: '系统日志' },
+  587: { name: 'SMTP', proto: 'TCP', desc: 'SMTP 邮件提交' },
+  631: { name: 'IPP', proto: 'TCP', desc: '互联网打印协议' },
+  636: { name: 'LDAPS', proto: 'TCP', desc: 'LDAP over SSL' },
+  993: { name: 'IMAPS', proto: 'TCP', desc: 'IMAP over SSL' },
+  995: { name: 'POP3S', proto: 'TCP', desc: 'POP3 over SSL' },
+  1080: { name: 'SOCKS', proto: 'TCP', desc: 'SOCKS 代理' },
+  1194: { name: 'OpenVPN', proto: 'UDP', desc: 'OpenVPN' },
+  1433: { name: 'MSSQL', proto: 'TCP', desc: 'Microsoft SQL Server' },
+  1521: { name: 'Oracle', proto: 'TCP', desc: 'Oracle 数据库' },
+  2049: { name: 'NFS', proto: 'TCP/UDP', desc: '网络文件系统' },
+  2181: { name: 'ZooKeeper', proto: 'TCP', desc: 'Apache ZooKeeper' },
+  2375: { name: 'Docker', proto: 'TCP', desc: 'Docker REST API (未加密)' },
+  2376: { name: 'Docker', proto: 'TCP', desc: 'Docker REST API (TLS)' },
+  3306: { name: 'MySQL', proto: 'TCP', desc: 'MySQL 数据库' },
+  3389: { name: 'RDP', proto: 'TCP', desc: '远程桌面协议' },
+  5432: { name: 'PostgreSQL', proto: 'TCP', desc: 'PostgreSQL 数据库' },
+  5672: { name: 'AMQP', proto: 'TCP', desc: 'RabbitMQ / AMQP' },
+  5900: { name: 'VNC', proto: 'TCP', desc: 'VNC 远程桌面' },
+  6379: { name: 'Redis', proto: 'TCP', desc: 'Redis 缓存数据库' },
+  6443: { name: 'Kubernetes', proto: 'TCP', desc: 'Kubernetes API (TLS)' },
+  7001: { name: 'WebLogic', proto: 'TCP', desc: 'Oracle WebLogic' },
+  8080: { name: 'HTTP-Alt', proto: 'TCP', desc: 'HTTP 备用端口' },
+  8443: { name: 'HTTPS-Alt', proto: 'TCP', desc: 'HTTPS 备用端口' },
+  9000: { name: 'PHP-FPM', proto: 'TCP', desc: 'PHP-FPM 管理' },
+  9092: { name: 'Kafka', proto: 'TCP', desc: 'Apache Kafka' },
+  9200: { name: 'Elasticsearch', proto: 'TCP', desc: 'Elasticsearch REST API' },
+  9418: { name: 'Git', proto: 'TCP', desc: 'Git 传输协议' },
+  11211: { name: 'Memcached', proto: 'TCP/UDP', desc: 'Memcached 缓存' },
+  27017: { name: 'MongoDB', proto: 'TCP', desc: 'MongoDB 数据库' },
+};
+
+const WELL_KNOWN_PORTS = [22, 80, 443, 3306, 5432, 6379, 8080, 9200, 27017];
+
+function lookupPort() {
+  let port = parseInt(document.getElementById('port-input').value);
+  if (isNaN(port) || port < 1) port = 1;
+  if (port > 65535) port = 65535;
+
+  document.getElementById('port-number').textContent = port;
+  const details = document.getElementById('port-details');
+  const data = PORT_DATA[port];
+
+  if (data) {
+    const category = port < 1024 ? 'Well-Known (0-1023)' : port < 49152 ? 'Registered (1024-49151)' : 'Dynamic (49152-65535)';
+    details.innerHTML = `
+      <div class="p-4 bg-gray-50 border border-gray-100 rounded-lg">
+        <div class="text-xs text-gray-500 mb-1">服务名称</div>
+        <div class="text-lg font-bold text-gray-800">${data.name}</div>
+      </div>
+      <div class="p-4 bg-gray-50 border border-gray-100 rounded-lg">
+        <div class="text-xs text-gray-500 mb-1">协议</div>
+        <div class="text-lg font-bold text-gray-800">${data.proto}</div>
+      </div>
+      <div class="p-4 bg-gray-50 border border-gray-100 rounded-lg md:col-span-2">
+        <div class="text-xs text-gray-500 mb-1">描述</div>
+        <div class="text-sm text-gray-700">${data.desc}</div>
+        <div class="text-xs text-gray-400 mt-1">端口范围：${category}</div>
+      </div>
+    `;
+  } else {
+    const category = port < 1024 ? 'Well-Known (0-1023)' : port < 49152 ? 'Registered (1024-49151)' : 'Dynamic (49152-65535)';
+    details.innerHTML = `
+      <div class="p-4 bg-gray-50 border border-gray-100 rounded-lg md:col-span-2">
+        <div class="text-xs text-gray-500 mb-1">状态</div>
+        <div class="text-sm text-gray-700">未注册或已知服务</div>
+        <div class="text-xs text-gray-400 mt-1">端口范围：${category}</div>
+      </div>
+    `;
+  }
+
+  // Render well-known port grid
+  const wkContainer = document.getElementById('port-well-known');
+  wkContainer.innerHTML = WELL_KNOWN_PORTS.map(p => {
+    const d = PORT_DATA[p];
+    const active = p === port;
+    return `<div class="p-2 bg-white border ${active ? 'border-blue-400 bg-blue-50' : 'border-gray-200'} rounded-lg cursor-pointer hover:bg-gray-50"
+                 onclick="document.getElementById('port-input').value=${p};lookupPort()">
+      <div class="font-bold text-gray-800">${p}</div>
+      <div class="text-gray-500">${d.name}</div>
+    </div>`;
+  }).join('');
+}
+
+lookupPort();
+</script>

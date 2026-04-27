@@ -1,0 +1,134 @@
+<%- /* content block for layout */ '' %>
+<% var content = ''; %>
+
+<div>
+  <div class="mb-6">
+    <a href="/" class="text-sm text-blue-500 hover:text-blue-700">&larr; 返回首页</a>
+  </div>
+
+  <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 md:p-8">
+    <div class="flex items-center gap-3 mb-4">
+      <span class="text-3xl"><%- tool.icon %></span>
+      <div>
+        <h1 class="text-2xl font-bold text-gray-800"><%- tool.name %></h1>
+        <p class="text-sm text-gray-500"><%- tool.desc %></p>
+      </div>
+    </div>
+
+    <div class="border-t border-gray-100 pt-6 mt-2">
+      <div class="flex flex-wrap gap-2 mb-4">
+        <button onclick="encodeUnicode()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium">→ 编码</button>
+        <button onclick="decodeUnicode()" class="px-4 py-2 bg-gray-800 text-white rounded-lg hover:bg-gray-900 text-sm font-medium">← 解码</button>
+        <button onclick="copyResult()" class="px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 text-sm font-medium">📋 复制</button>
+        <button onclick="clearAll()" class="px-4 py-2 bg-white border border-gray-300 text-gray-500 rounded-lg hover:bg-gray-50 text-sm font-medium">清空</button>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">原始文本</label>
+          <textarea id="unicode-input" rows="6" class="w-full border border-gray-300 rounded-lg p-3 font-mono text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" placeholder="输入文本..." spellcheck="false" oninput="autoEncode()">你好，世界！</textarea>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">编码结果</label>
+          <textarea id="unicode-output" rows="6" class="w-full border border-gray-300 rounded-lg p-3 font-mono text-sm bg-gray-50 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none resize-y" placeholder="编码结果..." spellcheck="false"></textarea>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-4 mb-4">
+        <label class="flex items-center gap-1.5 text-sm text-gray-600 cursor-pointer">
+          <input type="radio" name="unicode-format" value="\\u" checked onchange="autoEncode()"> \uXXXX
+        </label>
+        <label class="flex items-center gap-1.5 text-sm text-gray-600 cursor-pointer">
+          <input type="radio" name="unicode-format" value="&#" onchange="autoEncode()"> &amp;#NNN;
+        </label>
+        <label class="flex items-center gap-1.5 text-sm text-gray-600 cursor-pointer">
+          <input type="radio" name="unicode-format" value="U+" onchange="autoEncode()"> U+XXXX
+        </label>
+        <label class="flex items-center gap-1.5 text-sm text-gray-600 cursor-pointer">
+          <input type="radio" name="unicode-format" value="hex" onchange="autoEncode()"> Hex
+        </label>
+      </div>
+
+      <div class="p-4 bg-gray-50 rounded-lg">
+        <h3 class="text-sm font-semibold text-gray-700 mb-2">💡 字符详情</h3>
+        <div id="unicode-details" class="text-xs text-gray-500">输入文本后显示详情</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const inputEl = document.getElementById('unicode-input');
+const outputEl = document.getElementById('unicode-output');
+const detailsEl = document.getElementById('unicode-details');
+
+function autoEncode() { encodeUnicode(); }
+
+function encodeUnicode() {
+  const text = inputEl;
+  const format = document.querySelector('input[name="unicode-format"]:checked').value;
+  let result = '';
+  let details = '';
+
+  for (let i = 0; i < text.length; i++) {
+    const code = text.charCodeAt(i);
+    const hex = code.toString(16).toUpperCase().padStart(4, '0');
+    const ch = text[i];
+
+    let enc;
+    switch (format) {
+      case '\\u': enc = '\\u' + hex; break;
+      case '&#': enc = '&#' + code + ';'; break;
+      case 'U+': enc = 'U+' + hex; break;
+      case 'hex': enc = hex; break;
+    }
+    result += enc;
+    details += `<div class="flex gap-3"><span class="w-6 text-center">${ch}</span><span class="text-gray-400">U+${hex}</span><span class="text-gray-400">${code}</span></div>`;
+  }
+
+  outputEl.value = result;
+  detailsEl.innerHTML = details || '输入文本后显示详情';
+}
+
+function decodeUnicode() {
+  const raw = outputEl.value.trim();
+  if (!raw) return;
+
+  let result = '';
+
+  // Try different formats
+  if (raw.includes('\\u')) {
+    result = raw.replace(/\\u([0-9A-Fa-f]{4})/g, (_, h) => String.fromCharCode(parseInt(h, 16)));
+  } else if (raw.includes('&#') && raw.includes(';')) {
+    result = raw.replace(/&#(\d+);/g, (_, d) => String.fromCharCode(parseInt(d)));
+  } else if (raw.startsWith('U+')) {
+    result = raw.split(/[\s,]+/).map(s => {
+      const m = s.match(/U\+([0-9A-Fa-f]+)/i);
+      return m ? String.fromCharCode(parseInt(m[1], 16)) : s;
+    }).join('');
+  } else {
+    result = raw.split(/[\s,]+/).map(s => {
+      s = s.trim();
+      if (/^[0-9A-Fa-f]{2,6}$/.test(s)) return String.fromCharCode(parseInt(s, 16));
+      return s;
+    }).join('');
+  }
+
+  inputEl.value = result;
+  encodeUnicode();
+}
+
+function copyResult() {
+  const text = outputEl.value;
+  if (!text) return;
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = document.querySelector('[onclick="copyResult()"]');
+    btn.textContent = '✅ 已复制';
+    setTimeout(() => btn.textContent = '📋 复制', 1500);
+  });
+}
+
+function clearAll() { inputEl.value = ''; outputEl.value = ''; detailsEl.innerHTML = '输入文本后显示详情'; }
+
+encodeUnicode();
+</script>

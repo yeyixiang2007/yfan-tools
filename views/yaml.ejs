@@ -1,0 +1,219 @@
+<%- /* content block for layout */ '' %>
+<% var content = ''; %>
+
+<div>
+  <div class="mb-6">
+    <a href="/" class="text-sm text-blue-500 hover:text-blue-700">&larr; 返回首页</a>
+  </div>
+
+  <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 md:p-8">
+    <div class="flex items-center gap-3 mb-4">
+      <span class="text-3xl"><%- tool.icon %></span>
+      <div>
+        <h1 class="text-2xl font-bold text-gray-800"><%- tool.name %></h1>
+        <p class="text-sm text-gray-500"><%- tool.desc %></p>
+      </div>
+    </div>
+
+    <div class="border-t border-gray-100 pt-6 mt-2">
+      <div class="flex flex-wrap gap-2 mb-4">
+        <button onclick="convertYamlToJson()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium">YAML → JSON</button>
+        <button onclick="convertJsonToYaml()" class="px-4 py-2 bg-gray-800 text-white rounded-lg hover:bg-gray-900 text-sm font-medium">JSON → YAML</button>
+        <button onclick="copyResult()" class="px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 text-sm font-medium">📋 复制</button>
+        <button onclick="formatYaml()" class="px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 text-sm font-medium">✨ 格式化</button>
+        <button onclick="clearAll()" class="px-4 py-2 bg-white border border-gray-300 text-gray-500 rounded-lg hover:bg-gray-50 text-sm font-medium">清空</button>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">输入</label>
+          <textarea id="yaml-input" rows="14" class="w-full border border-gray-300 rounded-lg p-3 font-mono text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" spellcheck="false" placeholder="粘贴 YAML 或 JSON..." oninput="autoParse()">
+server:
+  port: 3000
+  host: localhost
+database:
+  name: mydb
+  pool: 10</textarea>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">输出</label>
+          <textarea id="yaml-output" rows="14" class="w-full border border-gray-300 rounded-lg p-3 font-mono text-sm bg-gray-50 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" spellcheck="false" placeholder="结果..." readonly></textarea>
+        </div>
+      </div>
+
+      <div id="yaml-status" class="text-sm text-gray-500"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+// Simple YAML parser (handles most common cases)
+function parseYamlSimple(text) {
+  const lines = text.split('\n');
+  const result = {};
+  const stack = [{obj: result, indent: -1, key: null}];
+
+  for (let line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith('#')) continue;
+
+    const indent = line.length - trimmed.length;
+    const isList = trimmed.startsWith('- ');
+    let key = '', val = '';
+
+    if (isList) {
+      const rest = trimmed.substring(2).trim();
+      const colonIdx = rest.indexOf(':');
+      if (colonIdx > 0) {
+        key = rest.substring(0, colonIdx).trim();
+        val = rest.substring(colonIdx + 1).trim();
+      } else {
+        key = rest;
+        val = null;
+      }
+    } else {
+      const colonIdx = trimmed.indexOf(':');
+      if (colonIdx < 0) continue;
+      key = trimmed.substring(0, colonIdx).trim();
+      val = trimmed.substring(colonIdx + 1).trim();
+    }
+
+    while (stack.length > 1 && indent <= stack[stack.length - 1].indent) stack.pop();
+    const parent = stack[stack.length - 1];
+    const currentObj = {};
+
+    if (!val || val === '') {
+      if (isList) {
+        if (!Array.isArray(parent.obj)) parent.obj = [];
+        parent.obj.push(currentObj);
+      } else {
+        parent.obj[key] = currentObj;
+      }
+      stack.push({obj: currentObj, indent, key});
+    } else {
+      const parsedVal = parseYamlValue(val);
+      if (isList) {
+        if (!Array.isArray(parent.obj)) parent.obj = [];
+        parent.obj.push(parsedVal);
+      } else {
+        parent.obj[key] = parsedVal;
+      }
+    }
+  }
+  return result;
+}
+
+function parseYamlValue(val) {
+  if (val === 'true' || val === 'yes') return true;
+  if (val === 'false' || val === 'no') return false;
+  if (val === 'null' || val === '~') return null;
+  if (!isNaN(val) && val !== '') return Number(val);
+  if ((val.startsWith("'") && val.endsWith("'")) || (val.startsWith('"') && val.endsWith('"'))) return val.slice(1, -1);
+  return val;
+}
+
+function objToYaml(obj, indent = 0) {
+  const pad = '  '.repeat(indent);
+  let result = '';
+  if (Array.isArray(obj)) {
+    for (const item of obj) {
+      if (typeof item === 'object' && item !== null) {
+        result += pad + '- ';
+        const keys = Object.keys(item);
+        if (keys.length > 0) {
+          result += keys[0] + ': ' + objToYamlValue(item[keys[0]]) + '\n';
+          for (let i = 1; i < keys.length; i++) {
+            result += pad + '  ' + keys[i] + ': ' + objToYamlValue(item[keys[i]]) + '\n';
+          }
+        } else {
+          result += '{}\n';
+        }
+      } else {
+        result += pad + '- ' + objToYamlValue(item) + '\n';
+      }
+    }
+  } else if (typeof obj === 'object' && obj !== null) {
+    for (const [k, v] of Object.entries(obj)) {
+      if (typeof v === 'object' && v !== null) {
+        result += pad + k + ':\n';
+        result += objToYaml(v, indent + 1);
+      } else {
+        result += pad + k + ': ' + objToYamlValue(v) + '\n';
+      }
+    }
+  }
+  return result;
+}
+
+function objToYamlValue(v) {
+  if (v === null || v === undefined) return 'null';
+  if (typeof v === 'boolean') return v ? 'true' : 'false';
+  if (typeof v === 'number') return String(v);
+  if (typeof v === 'string') {
+    if (/[:\{\}\[\],&\*#\?|<>=!%@`]/.test(v)) return "'" + v.replace(/'/g, "''") + "'";
+    return v;
+  }
+  return String(v);
+}
+
+let autoTimeout = null;
+function autoParse() { clearTimeout(autoTimeout); autoTimeout = setTimeout(tryAuto, 500); }
+
+function tryAuto() {
+  const text = inputEl.value.trim();
+  if (!text) return;
+  try {
+    if (text.trim().startsWith('{') || text.trim().startsWith('[')) {
+      convertJsonToYaml();
+    } else {
+      convertYamlToJson();
+    }
+  } catch(e) { /* silent */ }
+}
+
+const inputEl = document.getElementById('yaml-input');
+const outputEl = document.getElementById('yaml-output');
+const statusEl = document.getElementById('yaml-status');
+
+function convertYamlToJson() {
+  try {
+    const obj = parseYamlSimple(inputEl.value);
+    outputEl.value = JSON.stringify(obj, null, 2);
+    statusEl.textContent = '✅ 转换成功';
+  } catch (e) {
+    statusEl.textContent = '❌ YAML 解析失败: ' + e.message;
+  }
+}
+
+function convertJsonToYaml() {
+  try {
+    const obj = JSON.parse(inputEl.value);
+    outputEl.value = objToYaml(obj).trimEnd();
+    statusEl.textContent = '✅ 转换成功';
+  } catch (e) {
+    statusEl.textContent = '❌ JSON 解析失败: ' + e.message;
+  }
+}
+
+function formatYaml() {
+  try {
+    const obj = parseYamlSimple(inputEl.value);
+    outputEl.value = objToYaml(obj).trimEnd();
+    statusEl.textContent = '✅ 格式化完成';
+  } catch (e) {
+    statusEl.textContent = '❌ 格式化失败: ' + e.message;
+  }
+}
+
+function copyResult() {
+  const text = outputEl.value;
+  if (!text) return;
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = document.querySelector('[onclick="copyResult()"]');
+    btn.textContent = '✅ 已复制';
+    setTimeout(() => btn.textContent = '📋 复制', 1500);
+  });
+}
+
+function clearAll() { inputEl.value = ''; outputEl.value = ''; statusEl.textContent = ''; }
+</script>

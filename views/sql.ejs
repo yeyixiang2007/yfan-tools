@@ -1,0 +1,193 @@
+<%- /* content block for layout */ '' %>
+<% var content = ''; %>
+
+<div>
+  <div class="mb-6">
+    <a href="/" class="text-sm text-blue-500 hover:text-blue-700">&larr; 返回首页</a>
+  </div>
+
+  <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 md:p-8">
+    <div class="flex items-center gap-3 mb-4">
+      <span class="text-3xl"><%- tool.icon %></span>
+      <div>
+        <h1 class="text-2xl font-bold text-gray-800"><%- tool.name %></h1>
+        <p class="text-sm text-gray-500"><%- tool.desc %></p>
+      </div>
+    </div>
+
+    <div class="border-t border-gray-100 pt-6 mt-2">
+      <div class="flex flex-wrap gap-2 mb-4">
+        <button onclick="formatSql()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium">✨ 格式化</button>
+        <button onclick="minifySql()" class="px-4 py-2 bg-gray-800 text-white rounded-lg hover:bg-gray-900 text-sm font-medium">🔽 压缩</button>
+        <button onclick="copyResult()" class="px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 text-sm font-medium">📋 复制</button>
+        <button onclick="clearAll()" class="px-4 py-2 bg-white border border-gray-300 text-gray-500 rounded-lg hover:bg-gray-50 text-sm font-medium">清空</button>
+      </div>
+
+      <div class="mb-4">
+        <label class="block text-sm font-medium text-gray-700 mb-1">SQL 语句</label>
+        <textarea id="sql-input" rows="8" class="w-full border border-gray-300 rounded-lg p-3 font-mono text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" spellcheck="false" placeholder="粘贴 SQL..." oninput="autoFormat()">SELECT u.id,u.name,COUNT(o.id) as order_count FROM users u LEFT JOIN orders o ON u.id=o.user_id WHERE u.status='active' GROUP BY u.id,u.name HAVING COUNT(o.id)>5 ORDER BY order_count DESC LIMIT 10</textarea>
+      </div>
+
+      <div class="mb-4">
+        <label class="block text-sm font-medium text-gray-700 mb-1">格式化结果</label>
+        <textarea id="sql-output" rows="14" class="w-full border border-gray-300 rounded-lg p-3 font-mono text-sm bg-gray-50 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" spellcheck="false" readonly></textarea>
+      </div>
+
+      <div id="sql-status" class="text-sm text-gray-500"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+const SQL_KEYWORDS = [
+  'SELECT', 'FROM', 'WHERE', 'AND', 'OR', 'NOT', 'IN', 'IS', 'NULL',
+  'INSERT', 'INTO', 'VALUES', 'UPDATE', 'SET', 'DELETE',
+  'CREATE', 'TABLE', 'ALTER', 'DROP', 'INDEX', 'VIEW',
+  'JOIN', 'LEFT', 'RIGHT', 'INNER', 'OUTER', 'CROSS', 'ON',
+  'GROUP BY', 'ORDER BY', 'HAVING', 'LIMIT', 'OFFSET',
+  'AS', 'DISTINCT', 'COUNT', 'SUM', 'AVG', 'MIN', 'MAX',
+  'UNION', 'ALL', 'EXISTS', 'CASE', 'WHEN', 'THEN', 'ELSE', 'END',
+  'BETWEEN', 'LIKE', 'ASC', 'DESC', 'CAST', 'COALESCE',
+  'HAVING', 'WITH', 'RECURSIVE', 'EXCEPT', 'INTERSECT',
+  'TRUE', 'FALSE', 'PRIMARY', 'KEY', 'FOREIGN', 'REFERENCES',
+  'DEFAULT', 'CHECK', 'UNIQUE', 'CONSTRAINT', 'AUTO_INCREMENT',
+  'BIGINT', 'INT', 'INTEGER', 'VARCHAR', 'TEXT', 'BOOLEAN', 'DATE',
+  'DATETIME', 'TIMESTAMP', 'FLOAT', 'DOUBLE', 'DECIMAL', 'CHAR',
+  'IF', 'REPLACE', 'TRUNCATE', 'DEFAULT', 'CASCADE'
+];
+
+const inputEl = document.getElementById('sql-input');
+const outputEl = document.getElementById('sql-output');
+const statusEl = document.getElementById('sql-status');
+
+let formatTimer = null;
+function autoFormat() { clearTimeout(formatTimer); formatTimer = setTimeout(formatSql, 500); }
+
+function formatSql() {
+  const sql = inputEl.value.trim();
+  if (!sql) return;
+
+  try {
+    const formatted = formatSqlString(sql);
+    outputEl.value = formatted;
+    statusEl.textContent = '✅ 格式化完成';
+  } catch (e) {
+    statusEl.textContent = '❌ 格式化失败';
+  }
+}
+
+function formatSqlString(sql) {
+  // Normalize
+  let s = sql.replace(/\n/g, ' ').replace(/\s+/g, ' ').trim();
+
+  // Split by major keywords
+  const majorClauses = ['SELECT', 'FROM', 'WHERE', 'GROUP BY', 'ORDER BY', 'HAVING', 'LIMIT', 'OFFSET',
+    'INSERT INTO', 'VALUES', 'UPDATE', 'SET', 'DELETE FROM',
+    'LEFT JOIN', 'RIGHT JOIN', 'INNER JOIN', 'OUTER JOIN', 'CROSS JOIN', 'JOIN',
+    'ON', 'UNION', 'UNION ALL', 'EXCEPT', 'INTERSECT',
+    'AND', 'OR',
+    'CREATE TABLE', 'ALTER TABLE', 'DROP TABLE', 'CREATE INDEX', 'DROP INDEX'];
+
+  // Add line breaks before major clauses
+  const clauseRegex = new RegExp('\\b(' + majorClauses.join('|') + ')\\b', 'gi');
+  s = s.replace(clauseRegex, '\n$1');
+
+  // Clean up multiple newlines
+  s = s.replace(/\n\s*\n/g, '\n');
+  s = s.replace(/^\n/, '');
+
+  // Handle commas in SELECT
+  const lines = s.split('\n');
+  let result = [];
+
+  for (let i = 0; i < lines.length; i++) {
+    let line = lines[i].trim();
+    if (!line) continue;
+
+    const upper = line.toUpperCase();
+
+    if (upper.startsWith('SELECT ') || upper.startsWith('SELECT\n')) {
+      // Format SELECT columns with comma line breaks
+      if (upper.startsWith('SELECT ')) {
+        const rest = line.substring(7).trim();
+        const parts = splitSelectColumns(rest);
+        result.push('SELECT');
+        for (const p of parts) result.push('  ' + p);
+      } else {
+        result.push(line);
+      }
+    } else if (['FROM', 'WHERE', 'GROUP BY', 'ORDER BY', 'HAVING', 'LIMIT', 'OFFSET',
+      'INSERT INTO', 'VALUES', 'UPDATE', 'DELETE FROM',
+      'UNION', 'UNION ALL', 'EXCEPT', 'INTERSECT'].indexOf(upper) >= 0) {
+      result.push(line);
+    } else if (upper === 'ON') {
+      result.push('  ' + line);
+    } else if (['LEFT JOIN', 'RIGHT JOIN', 'INNER JOIN', 'OUTER JOIN', 'CROSS JOIN',
+      'JOIN', 'AND', 'OR'].indexOf(upper) >= 0) {
+      result.push(line);
+    } else if (upper.startsWith('SET ')) {
+      const rest = line.substring(4).trim();
+      const parts = rest.split(',').map(p => p.trim());
+      result.push('SET');
+      for (const p of parts) result.push('  ' + p + ',');
+      if (result[result.length - 1].endsWith(',')) result[result.length - 1] = result[result.length - 1].slice(0, -1);
+    } else {
+      result.push('  ' + line);
+    }
+  }
+
+  // Capitalize keywords
+  result = result.map(line => {
+    let l = line;
+    for (const kw of SQL_KEYWORDS) {
+      const regex = new RegExp('\\b' + escapeRegex(kw) + '\\b', 'gi');
+      l = l.replace(regex, kw);
+    }
+    return l;
+  });
+
+  return result.join('\n');
+}
+
+function splitSelectColumns(text) {
+  const parts = [];
+  let depth = 0;
+  let current = '';
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    if (ch === '(') depth++;
+    else if (ch === ')') depth--;
+    if (ch === ',' && depth === 0) {
+      parts.push(current.trim());
+      current = '';
+    } else {
+      current += ch;
+    }
+  }
+  if (current.trim()) parts.push(current.trim());
+  return parts.length > 0 ? parts : [text];
+}
+
+function escapeRegex(s) {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function minifySql() {
+  const sql = inputEl.value.trim();
+  if (!sql) return;
+  outputEl.value = sql.replace(/\n/g, ' ').replace(/\s+/g, ' ').trim();
+  statusEl.textContent = '✅ 压缩完成';
+}
+
+function copyResult() {
+  const text = outputEl.value;
+  if (!text) return;
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = document.querySelector('[onclick="copyResult()"]');
+    btn.textContent = '✅ 已复制';
+    setTimeout(() => btn.textContent = '📋 复制', 1500);
+  });
+}
+
+function clearAll() { inputEl.value = ''; outputEl.value = ''; statusEl.textContent = ''; }
+</script>

@@ -24,6 +24,9 @@ const tools = [
   { id: 'urlcodec',  name: 'URL 编解码',        desc: 'URL 编码与解码，支持参数解析',         icon: '🔗', category: 'encode' },
   { id: 'htmlescape',name: 'HTML 实体转义',     desc: 'HTML 特殊字符编码与解码，支持预览',    icon: '🏷️', category: 'encode' },
   { id: 'baseconv',  name: '进制转换',          desc: '二进制/八进制/十进制/十六进制互转',    icon: '🔢', category: 'encode' },
+  { id: 'morse',     name: '摩尔斯电码',         desc: '文字与摩尔斯电码互转，支持音频播放',    icon: '📡', category: 'encode' },
+  { id: 'roman',     name: '罗马数字转换',       desc: '阿拉伯数字与罗马数字互转',             icon: '🏛️', category: 'encode' },
+  { id: 'unicode',   name: 'Unicode 工具',       desc: 'Unicode 编码/解码，多种格式输出',      icon: '🔣', category: 'encode' },
 
   // ── 开发调试 ──
   { id: 'json',      name: 'JSON 格式化',       desc: 'JSON 格式化、压缩、校验',              icon: '🔧', category: 'dev' },
@@ -33,19 +36,29 @@ const tools = [
   { id: 'hash',      name: 'Hash 生成器',       desc: 'MD5/SHA-1/SHA-256/SHA-512 哈希计算',  icon: '🔑', category: 'dev' },
   { id: 'jwt',       name: 'JWT 解码器',        desc: '解码 JWT Token，查看 Header/Payload',  icon: '🔐', category: 'dev' },
   { id: 'color',     name: '颜色工具',          desc: 'HEX/RGB/HSL 颜色空间互转',            icon: '🎨', category: 'dev' },
+  { id: 'yaml',      name: 'YAML/JSON 互转',     desc: 'YAML 与 JSON 格式双向转换',            icon: '📋', category: 'dev' },
+  { id: 'xml',       name: 'XML 格式化',         desc: 'XML 格式化、压缩、校验',               icon: '📄', category: 'dev' },
+  { id: 'sql',       name: 'SQL 格式化',         desc: 'SQL 关键字大写、格式化与压缩',         icon: '🗄️', category: 'dev' },
 
   // ── 生成创建 ──
   { id: 'password',  name: '密码生成器',        desc: '可配置的强密码批量生成',              icon: '🔑', category: 'gen' },
   { id: 'uuid',      name: 'UUID 生成器',       desc: '批量生成 UUID v4/v7',                 icon: '🆔', category: 'gen' },
   { id: 'qrcode',    name: '二维码生成',        desc: '输入文本生成可下载的二维码图片',        icon: '📱', category: 'gen' },
+  { id: 'barcode',   name: '条形码生成',          desc: '支持 CODE128/EAN13/UPC 等格式',        icon: '🏷️', category: 'gen' },
+  { id: 'lorem',     name: 'Lorem Ipsum',         desc: 'Lorem Ipsum 假文生成器（单词/句子/段落）', icon: '📝', category: 'gen' },
 
   // ── 信息查询 ──
   { id: 'ip',        name: 'IP 信息查询',       desc: '查询 IP 归属地、运营商、ASN 等信息',   icon: '🌐', category: 'info' },
   { id: 'timestamp', name: '时间戳转换',        desc: 'Unix 时间戳 ↔ 日期时间互转',          icon: '⏰', category: 'info' },
+  { id: 'mac',       name: 'MAC 地址查询',       desc: '查询 MAC 地址厂商，格式化转换',        icon: '🔌', category: 'info' },
+  { id: 'dns',       name: 'DNS 查询',           desc: 'A/AAAA/MX/NS/TXT/CNAME/SOA 记录查询',  icon: '🌐', category: 'info' },
+  { id: 'port',      name: '端口查询',           desc: '常用端口查询与速查表',                  icon: '🚪', category: 'info' },
 
   // ── 文本处理 ──
   { id: 'counter',   name: '文本统计',          desc: '字符、单词、行数、中文字数实时统计',    icon: '📊', category: 'text' },
   { id: 'textsort',  name: '文本排序/去重',      desc: '升序/降序/去重/打乱/添加行号等',        icon: '📋', category: 'text' },
+  { id: 'caseconv',  name: '字母大小写转换',      desc: '大写/小写/首字母/驼峰/下划线/连字符',  icon: '🔤', category: 'text' },
+  { id: 'slug',      name: 'Slug 生成器',         desc: '将标题文本转换为 URL 友好的 Slug',      icon: '🔗', category: 'text' },
 ]
 
 const viewDir = path.join(__dirname, '..', 'views')
