@@ -1,0 +1,188 @@
+<%- /* content block for layout */ '' %>
+<% var content = ''; %>
+
+<div>
+  <div class="mb-6">
+    <a href="/" class="text-sm text-blue-500 hover:text-blue-700">&larr; 返回首页</a>
+  </div>
+
+  <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 md:p-8">
+    <div class="flex items-center gap-3 mb-4">
+      <span class="text-3xl"><%- tool.icon %></span>
+      <div>
+        <h1 class="text-2xl font-bold text-gray-800"><%- tool.name %></h1>
+        <p class="text-sm text-gray-500"><%- tool.desc %></p>
+      </div>
+    </div>
+
+    <div class="border-t border-gray-100 pt-6 mt-2">
+      <div class="flex flex-wrap gap-2 mb-4">
+        <button onclick="formatToml()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium">✨ 格式化</button>
+        <button onclick="tomlToJson()" class="px-4 py-2 bg-gray-800 text-white rounded-lg hover:bg-gray-900 text-sm font-medium">TOML → JSON</button>
+        <button onclick="jsonToToml()" class="px-4 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-800 text-sm font-medium">JSON → TOML</button>
+        <button onclick="copyResult()" class="px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 text-sm font-medium">📋 复制</button>
+        <button onclick="clearAll()" class="px-4 py-2 bg-white border border-gray-300 text-gray-500 rounded-lg hover:bg-gray-50 text-sm font-medium">清空</button>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">输入</label>
+          <textarea id="toml-input" rows="14" class="w-full border border-gray-300 rounded-lg p-3 font-mono text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" spellcheck="false" placeholder="粘贴 TOML 或 JSON..." oninput="autoDetect()">
+title = "TOML Example"
+[owner]
+name = "Tom"
+dob = 1979-05-27
+
+[database]
+enabled = true
+ports = [8000, 8001, 8002]</textarea>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">输出</label>
+          <textarea id="toml-output" rows="14" class="w-full border border-gray-300 rounded-lg p-3 font-mono text-sm bg-gray-50 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" readonly placeholder="结果..."></textarea>
+        </div>
+      </div>
+
+      <div id="toml-status" class="text-sm text-gray-500">输入后自动检测格式</div>
+    </div>
+  </div>
+</div>
+
+<script>
+const inputEl = document.getElementById('toml-input');
+const outputEl = document.getElementById('toml-output');
+const statusEl = document.getElementById('toml-status');
+
+let detectTimer = null;
+function autoDetect() { clearTimeout(detectTimer); detectTimer = setTimeout(detectAndConvert, 500); }
+
+function detectAndConvert() {
+  const text = inputEl.value.trim();
+  if (!text) return;
+  if (text.startsWith('{') || text.startsWith('[')) { jsonToToml(); } else { formatToml(); }
+}
+
+function parseTomlSimple(text) {
+  // Simple TOML parser
+  const result = {};
+  let currentSection = result;
+  const lines = text.split('\n');
+
+  for (let line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith('#') || trimmed.startsWith('//')) continue;
+
+    // Table header [section] or [table.key]
+    const tableMatch = trimmed.match(/^\[([^\]]+)\]$/);
+    if (tableMatch) {
+      const keys = tableMatch[1].split('.');
+      currentSection = result;
+      for (const k of keys) {
+        const key = k.trim();
+        if (!currentSection[key] || typeof currentSection[key] !== 'object') currentSection[key] = {};
+        currentSection = currentSection[key];
+      }
+      continue;
+    }
+
+    // Key = value
+    const kvMatch = trimmed.match(/^([^=]+)=(.+)$/);
+    if (kvMatch) {
+      const key = kvMatch[1].trim();
+      let val = kvMatch[2].trim();
+
+      // Parse value
+      if (val === 'true') currentSection[key] = true;
+      else if (val === 'false') currentSection[key] = false;
+      else if ((val.startsWith("'") && val.endsWith("'")) || (val.startsWith('"') && val.endsWith('"'))) currentSection[key] = val.slice(1, -1);
+      else if (!isNaN(val) && val.indexOf('"') === -1 && val.indexOf("'") === -1) currentSection[key] = Number(val);
+      else if (val.startsWith('[') && val.endsWith(']')) {
+        currentSection[key] = val.slice(1, -1).split(',').map(v => {
+          const vv = v.trim();
+          if (!isNaN(vv)) return Number(vv);
+          if ((vv.startsWith("'") && vv.endsWith("'")) || (vv.startsWith('"') && vv.endsWith('"'))) return vv.slice(1, -1);
+          return vv;
+        });
+      } else if (val.includes('T') && /^\d{4}/.test(val)) {
+        currentSection[key] = val; // date
+      } else {
+        currentSection[key] = val;
+      }
+    }
+  }
+  return result;
+}
+
+function objToToml(obj, prefix = '') {
+  let result = '';
+  const keys = Object.keys(obj);
+  const tables = [];
+  const values = [];
+
+  for (const k of keys) {
+    if (typeof obj[k] === 'object' && obj[k] !== null && !Array.isArray(obj[k])) {
+      tables.push(k);
+    } else {
+      values.push(k);
+    }
+  }
+
+  for (const k of values) {
+    const v = obj[k];
+    if (typeof v === 'string') result += `${k} = "${v.replace(/"/g, '\\"')}"\n`;
+    else if (Array.isArray(v)) result += `${k} = [${v.map(i => typeof i === 'string' ? `"${i}"` : i).join(', ')}]\n`;
+    else result += `${k} = ${v}\n`;
+  }
+
+  if (tables.length > 0 && values.length > 0) result += '\n';
+
+  for (const k of tables) {
+    const section = prefix ? `${prefix}.${k}` : k;
+    result += `[${section}]\n${objToToml(obj[k], section)}`;
+  }
+
+  return result;
+}
+
+function formatToml() {
+  try {
+    const obj = parseTomlSimple(inputEl.value);
+    outputEl.value = objToToml(obj).trimEnd();
+    statusEl.textContent = '✅ 格式化完成';
+  } catch (e) {
+    statusEl.textContent = '❌ 解析失败: ' + e.message;
+  }
+}
+
+function tomlToJson() {
+  try {
+    const obj = parseTomlSimple(inputEl.value);
+    outputEl.value = JSON.stringify(obj, null, 2);
+    statusEl.textContent = '✅ 转换成功';
+  } catch (e) {
+    statusEl.textContent = '❌ 转换失败: ' + e.message;
+  }
+}
+
+function jsonToToml() {
+  try {
+    const obj = JSON.parse(inputEl.value);
+    outputEl.value = objToToml(obj).trimEnd();
+    statusEl.textContent = '✅ 转换成功';
+  } catch (e) {
+    statusEl.textContent = '❌ JSON 解析失败: ' + e.message;
+  }
+}
+
+function copyResult() {
+  const text = outputEl.value;
+  if (!text) return;
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = document.querySelector('[onclick="copyResult()"]');
+    btn.textContent = '✅ 已复制';
+    setTimeout(() => btn.textContent = '📋 复制', 1500);
+  });
+}
+
+function clearAll() { inputEl.value = ''; outputEl.value = ''; statusEl.textContent = ''; }
+</script>

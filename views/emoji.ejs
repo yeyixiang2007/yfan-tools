@@ -1,0 +1,178 @@
+<%- /* content block for layout */ '' %>
+<% var content = ''; %>
+
+<div>
+  <div class="mb-6">
+    <a href="/" class="text-sm text-blue-500 hover:text-blue-700">&larr; 返回首页</a>
+  </div>
+
+  <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 md:p-8">
+    <div class="flex items-center gap-3 mb-4">
+      <span class="text-3xl"><%- tool.icon %></span>
+      <div>
+        <h1 class="text-2xl font-bold text-gray-800"><%- tool.name %></h1>
+        <p class="text-sm text-gray-500"><%- tool.desc %></p>
+      </div>
+    </div>
+
+    <div class="border-t border-gray-100 pt-6 mt-2">
+      <div class="mb-4">
+        <input id="emoji-search" type="text" class="w-full px-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" placeholder="搜索 Emoji（中文/英文）..." oninput="searchEmoji()" autofocus>
+      </div>
+
+      <div class="flex flex-wrap gap-4 mb-4 text-sm">
+        <button onclick="filterEmoji('all')" class="px-3 py-1.5 bg-gray-800 text-white rounded-lg text-sm font-medium" id="cat-all">全部</button>
+        <button onclick="filterEmoji('smileys')" class="px-3 py-1.5 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 text-sm" id="cat-smileys">😊 笑脸</button>
+        <button onclick="filterEmoji('people')" class="px-3 py-1.5 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 text-sm" id="cat-people">👋 人物</button>
+        <button onclick="filterEmoji('nature')" class="px-3 py-1.5 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 text-sm" id="cat-nature">🌿 自然</button>
+        <button onclick="filterEmoji('food')" class="px-3 py-1.5 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 text-sm" id="cat-food">🍕 食物</button>
+        <button onclick="filterEmoji('travel')" class="px-3 py-1.5 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 text-sm" id="cat-travel">🚗 旅行</button>
+        <button onclick="filterEmoji('activities')" class="px-3 py-1.5 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 text-sm" id="cat-activities">⚽ 活动</button>
+        <button onclick="filterEmoji('objects')" class="px-3 py-1.5 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 text-sm" id="cat-objects">💡 物品</button>
+        <button onclick="filterEmoji('symbols')" class="px-3 py-1.5 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 text-sm" id="cat-symbols">🔣 符号</button>
+        <button onclick="filterEmoji('flags')" class="px-3 py-1.5 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 text-sm" id="cat-flags">🏁 旗帜</button>
+      </div>
+
+      <div id="emoji-grid" class="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 gap-2"></div>
+
+      <div id="emoji-detail" class="hidden mt-4 p-4 bg-blue-50 border border-blue-100 rounded-lg flex items-center gap-4">
+        <span id="emoji-big" class="text-5xl"></span>
+        <div>
+          <div id="emoji-name" class="font-medium text-gray-800"></div>
+          <div id="emoji-code" class="text-xs text-gray-500 font-mono mt-1"></div>
+          <button onclick="copyEmoji()" class="mt-2 px-3 py-1 bg-white border border-gray-300 rounded text-xs hover:bg-gray-50">📋 复制 Emoji</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const EMOJIS = [
+  { e: '😀', n: ' grinning face', c: 'smileys', k: 'grin face smile happy' },
+  { e: '😂', n: ' face with tears of joy', c: 'smileys', k: 'tears laugh cry happy' },
+  { e: '🤣', n: ' rolling on the floor laughing', c: 'smileys', k: 'rofl laugh floor' },
+  { e: '😊', n: ' smiling face with smiling eyes', c: 'smileys', k: 'smile blush happy' },
+  { e: '🥰', n: ' smiling face with hearts', c: 'smileys', k: 'love heart adore' },
+  { e: '😍', n: ' smiling face with heart-eyes', c: 'smileys', k: 'love heart eyes crush' },
+  { e: '🤩', n: ' star-struck', c: 'smileys', k: 'star struck excited' },
+  { e: '😎', n: ' smiling face with sunglasses', c: 'smileys', k: 'cool sunglasses' },
+  { e: '🤔', n: ' thinking face', c: 'smileys', k: 'think thought wonder' },
+  { e: '😴', n: ' sleeping face', c: 'smileys', k: 'sleep tired zzz' },
+  { e: '😭', n: ' loudly crying face', c: 'smileys', k: 'cry sob tear sad' },
+  { e: '😤', n: ' face with steam from nose', c: 'smileys', k: 'angry frustrated triumph' },
+  { e: '😡', n: ' pouting face', c: 'smileys', k: 'angry mad rage' },
+  { e: '🥳', n: ' partying face', c: 'smileys', k: 'party celebrate birthday' },
+  { e: '👍', n: ' thumbs up', c: 'people', k: 'thumb like approve yes' },
+  { e: '👎', n: ' thumbs down', c: 'people', k: 'dislike reject no' },
+  { e: '👋', n: ' waving hand', c: 'people', k: 'wave hello bye' },
+  { e: '🙏', n: ' folded hands', c: 'people', k: 'pray please thank you' },
+  { e: '💪', n: ' flexed biceps', c: 'people', k: 'muscle strong flex' },
+  { e: '👏', n: ' clapping hands', c: 'people', k: 'clap applause congratulate' },
+  { e: '🤝', n: ' handshake', c: 'people', k: 'handshake deal agree' },
+  { e: '❤️', n: ' red heart', c: 'smileys', k: 'heart love' },
+  { e: '🔥', n: ' fire', c: 'nature', k: 'fire flame hot burn' },
+  { e: '⭐', n: ' star', c: 'nature', k: 'star' },
+  { e: '🌈', n: ' rainbow', c: 'nature', k: 'rainbow pride' },
+  { e: '☀️', n: ' sun', c: 'nature', k: 'sun sunny weather' },
+  { e: '🌙', n: ' moon', c: 'nature', k: 'moon night' },
+  { e: '🌸', n: ' cherry blossom', c: 'nature', k: 'cherry blossom flower spring' },
+  { e: '🌺', n: ' hibiscus', c: 'nature', k: 'hibiscus flower tropical' },
+  { e: '🌲', n: ' evergreen tree', c: 'nature', k: 'tree evergreen pine' },
+  { e: '🍕', n: ' pizza', c: 'food', k: 'pizza italian food' },
+  { e: '🍔', n: ' hamburger', c: 'food', k: 'burger fast food' },
+  { e: '🍟', n: ' french fries', c: 'food', k: 'fries fast food' },
+  { e: '🍜', n: ' steaming bowl', c: 'food', k: 'noodle ramen soup' },
+  { e: '🍣', n: ' sushi', c: 'food', k: 'sushi japanese fish' },
+  { e: '☕', n: ' hot beverage', c: 'food', k: 'coffee tea drink' },
+  { e: '🍺', n: ' beer mug', c: 'food', k: 'beer drink alcohol' },
+  { e: '🚗', n: ' automobile', c: 'travel', k: 'car vehicle auto' },
+  { e: '✈️', n: ' airplane', c: 'travel', k: 'plane flight travel' },
+  { e: '🚀', n: ' rocket', c: 'travel', k: 'rocket space launch' },
+  { e: '🏠', n: ' house', c: 'travel', k: 'house home building' },
+  { e: '🗺️', n: ' world map', c: 'travel', k: 'map world travel' },
+  { e: '⚽', n: ' soccer ball', c: 'activities', k: 'soccer football sport' },
+  { e: '🏀', n: ' basketball', c: 'activities', k: 'basketball sport' },
+  { e: '🎵', n: ' musical note', c: 'activities', k: 'music note song' },
+  { e: '🎮', n: ' video game', c: 'activities', k: 'game controller play' },
+  { e: '🎬', n: ' clapper board', c: 'activities', k: 'movie film cinema' },
+  { e: '💡', n: ' light bulb', c: 'objects', k: 'bulb idea light' },
+  { e: '📱', n: ' mobile phone', c: 'objects', k: 'phone mobile smartphone' },
+  { e: '💻', n: ' laptop', c: 'objects', k: 'laptop computer code' },
+  { e: '🔑', n: ' key', c: 'objects', k: 'key password lock' },
+  { e: '📚', n: ' books', c: 'objects', k: 'books library study' },
+  { e: '🔧', n: ' wrench', c: 'objects', k: 'wrench tool fix' },
+  { e: '💰', n: ' money bag', c: 'objects', k: 'money cash wealth' },
+  { e: '🔣', n: ' input symbols', c: 'symbols', k: 'symbols input' },
+  { e: '♻️', n: ' recycling symbol', c: 'symbols', k: 'recycle green eco' },
+  { e: '✅', n: ' check mark', c: 'symbols', k: 'check done yes complete' },
+  { e: '❌', n: ' cross mark', c: 'symbols', k: 'cross cancel wrong no' },
+  { e: '⚠️', n: ' warning', c: 'symbols', k: 'warning caution alert' },
+  { e: '™️', n: ' trade mark', c: 'symbols', k: 'trademark tm' },
+  { e: '🇨🇳', n: ' China', c: 'flags', k: 'china flag cn' },
+  { e: '🇺🇸', n: ' United States', c: 'flags', k: 'us flag america' },
+  { e: '🇬🇧', n: ' United Kingdom', c: 'flags', k: 'uk flag britain england' },
+  { e: '🇯🇵', n: ' Japan', c: 'flags', k: 'japan flag jp' },
+  { e: '🏁', n: ' chequered flag', c: 'flags', k: 'checkered flag finish race' },
+];
+
+let currentFilter = 'all';
+let currentSearch = '';
+
+function renderEmojis() {
+  const grid = document.getElementById('emoji-grid');
+  const filtered = EMOJIS.filter(e => {
+    if (currentFilter !== 'all' && e.c !== currentFilter) return false;
+    if (currentSearch && !e.k.toLowerCase().includes(currentSearch) && !e.n.toLowerCase().includes(currentSearch) && !e.e.includes(currentSearch)) return false;
+    return true;
+  });
+
+  if (filtered.length === 0) {
+    grid.innerHTML = '<div class="col-span-full text-center py-8 text-gray-400 text-sm">没有匹配的 Emoji</div>';
+    return;
+  }
+
+  grid.innerHTML = filtered.map(e =>
+    `<div class="p-3 bg-white border border-gray-200 rounded-lg text-center cursor-pointer hover:bg-blue-50 hover:border-blue-300 transition"
+          onclick="selectEmoji('${e.e}', '${escapeHtml(e.n.trim())}')">
+      <div class="text-2xl">${e.e}</div>
+      <div class="text-xs text-gray-500 truncate mt-1">${e.n.trim()}</div>
+    </div>`
+  ).join('');
+}
+
+function searchEmoji() {
+  currentSearch = document.getElementById('emoji-search').value.toLowerCase();
+  renderEmojis();
+}
+
+function filterEmoji(cat) {
+  currentFilter = cat;
+  document.querySelectorAll('[id^="cat-"], [id="cat-all"]').forEach(el => {
+    el.className = el.id === 'cat-' + cat || (cat === 'all' && el.id === 'cat-all')
+      ? 'px-3 py-1.5 bg-gray-800 text-white rounded-lg text-sm font-medium'
+      : 'px-3 py-1.5 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 text-sm';
+  });
+  renderEmojis();
+}
+
+function selectEmoji(emoji, name) {
+  document.getElementById('emoji-detail').classList.remove('hidden');
+  document.getElementById('emoji-big').textContent = emoji;
+  document.getElementById('emoji-name').textContent = name;
+  document.getElementById('emoji-code').textContent = `U+${emoji.codePointAt(0).toString(16).toUpperCase().padStart(4, '0')}`;
+}
+
+function copyEmoji() {
+  const emoji = document.getElementById('emoji-big').textContent;
+  navigator.clipboard.writeText(emoji).then(() => {
+    const btn = document.querySelector('[onclick="copyEmoji()"]');
+    btn.textContent = '✅ 已复制';
+    setTimeout(() => btn.textContent = '📋 复制 Emoji', 1500);
+  });
+}
+
+function escapeHtml(s) { return String(s).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[m]); }
+
+renderEmojis();
+</script>

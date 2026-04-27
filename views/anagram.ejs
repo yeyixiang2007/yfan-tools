@@ -1,0 +1,144 @@
+<%- /* content block for layout */ '' %>
+<% var content = ''; %>
+
+<div>
+  <div class="mb-6">
+    <a href="/" class="text-sm text-blue-500 hover:text-blue-700">&larr; 返回首页</a>
+  </div>
+
+  <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 md:p-8">
+    <div class="flex items-center gap-3 mb-4">
+      <span class="text-3xl"><%- tool.icon %></span>
+      <div>
+        <h1 class="text-2xl font-bold text-gray-800"><%- tool.name %></h1>
+        <p class="text-sm text-gray-500"><%- tool.desc %></p>
+      </div>
+    </div>
+
+    <div class="border-t border-gray-100 pt-6 mt-2">
+      <div class="flex flex-wrap gap-2 mb-4">
+        <button onclick="checkAnagram()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium">🔍 检测</button>
+        <button onclick="findAnagramsText()" class="px-4 py-2 bg-gray-800 text-white rounded-lg hover:bg-gray-900 text-sm font-medium">📝 全文找字谜</button>
+        <button onclick="clearAll()" class="px-4 py-2 bg-white border border-gray-300 text-gray-500 rounded-lg hover:bg-gray-50 text-sm font-medium">清空</button>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">单词/短语一</label>
+          <input id="anagram-word1" type="text" value="listen"
+                 class="w-full px-4 py-2 border border-gray-300 rounded-lg font-mono text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                 oninput="autoCheck()">
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">单词/短语二</label>
+          <input id="anagram-word2" type="text" value="silent"
+                 class="w-full px-4 py-2 border border-gray-300 rounded-lg font-mono text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                 oninput="autoCheck()">
+        </div>
+      </div>
+
+      <div id="anagram-result" class="hidden mb-4 p-6 rounded-lg text-center">
+        <div id="anagram-icon" class="text-4xl mb-2"></div>
+        <div id="anagram-status" class="text-lg font-bold"></div>
+        <div id="anagram-detail" class="text-sm text-gray-500 mt-1"></div>
+      </div>
+
+      <div class="mt-6">
+        <label class="block text-sm font-medium text-gray-700 mb-1">批量检测文本中的字谜对</label>
+        <textarea id="anagram-text" rows="4" class="w-full border border-gray-300 rounded-lg p-3 font-mono text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" spellcheck="false" placeholder="输入文本，提取所有字谜对..."></textarea>
+        <div id="anagram-pairs" class="mt-2 hidden">
+          <h3 class="text-sm font-medium text-gray-700 mb-1">发现的字谜对</h3>
+          <div id="anagram-pairs-list" class="text-xs font-mono space-y-1"></div>
+        </div>
+      </div>
+
+      <div class="mt-4 p-4 bg-gray-50 rounded-lg">
+        <h3 class="text-sm font-medium text-gray-700 mb-2">💡 试试这些</h3>
+        <div class="text-xs text-gray-500 space-y-1">
+          <div class="cursor-pointer hover:text-blue-600" onclick="tryPair('listen', 'silent')">listen ↔ silent</div>
+          <div class="cursor-pointer hover:text-blue-600" onclick="tryPair('debit card', 'bad credit')">debit card ↔ bad credit</div>
+          <div class="cursor-pointer hover:text-blue-600" onclick="tryPair('astronomer', 'moon starer')">astronomer ↔ moon starer</div>
+          <div class="cursor-pointer hover:text-blue-600" onclick="tryPair('the eyes', 'they see')">the eyes ↔ they see</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+function autoCheck() { checkAnagram(); }
+
+function normalize(s) {
+  return s.replace(/[^a-zA-Z0-9\u4e00-\u9fff]/g, '').toLowerCase().split('').sort().join('');
+}
+
+function checkAnagram() {
+  const w1 = document.getElementById('anagram-word1').value;
+  const w2 = document.getElementById('anagram-word2').value;
+  const resultDiv = document.getElementById('anagram-result');
+
+  if (!w1.trim() || !w2.trim()) { resultDiv.classList.add('hidden'); return; }
+
+  const n1 = normalize(w1);
+  const n2 = normalize(w2);
+  const isAnagram = n1 === n2 && n1.length > 0;
+
+  resultDiv.classList.remove('hidden');
+  resultDiv.className = isAnagram
+    ? 'mb-4 p-6 rounded-lg text-center bg-green-50 border border-green-200'
+    : 'mb-4 p-6 rounded-lg text-center bg-red-50 border border-red-200';
+
+  document.getElementById('anagram-icon').textContent = isAnagram ? '✅' : '❌';
+  document.getElementById('anagram-status').textContent = isAnagram ? '是字谜！' : '不是字谜';
+  document.getElementById('anagram-status').className = isAnagram ? 'text-lg font-bold text-green-700' : 'text-lg font-bold text-red-600';
+  document.getElementById('anagram-detail').textContent = `排序后: [${n1}] vs [${n2}]，${isAnagram ? '字符组成相同' : '字符组成不同'}`;
+}
+
+function findAnagramsText() {
+  const text = document.getElementById('anagram-text').value;
+  if (!text.trim()) return;
+
+  const words = text.toLowerCase().match(/\b[a-z]{3,}\b/g) || [];
+  const map = {};
+  const pairs = [];
+
+  for (const word of words) {
+    const key = word.split('').sort().join('');
+    if (!map[key]) map[key] = [];
+    map[key].push(word);
+  }
+
+  for (const [key, group] of Object.entries(map)) {
+    if (group.length >= 2) {
+      const unique = [...new Set(group)];
+      if (unique.length >= 2) pairs.push(unique.join(', '));
+    }
+  }
+
+  const listDiv = document.getElementById('anagram-pairs-list');
+  const container = document.getElementById('anagram-pairs');
+
+  if (pairs.length === 0) {
+    listDiv.innerHTML = '<div class="text-gray-400">未找到字谜对</div>';
+  } else {
+    listDiv.innerHTML = pairs.map(p => `<div class="p-1 bg-white rounded">${escapeHtml(p)}</div>`).join('');
+  }
+  container.classList.remove('hidden');
+}
+
+function tryPair(w1, w2) {
+  document.getElementById('anagram-word1').value = w1;
+  document.getElementById('anagram-word2').value = w2;
+  checkAnagram();
+}
+
+function clearAll() {
+  document.getElementById('anagram-word1').value = '';
+  document.getElementById('anagram-word2').value = '';
+  document.getElementById('anagram-result').classList.add('hidden');
+  document.getElementById('anagram-pairs').classList.add('hidden');
+  document.getElementById('anagram-text').value = '';
+}
+
+function escapeHtml(s) { return String(s).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[m]); }
+</script>
