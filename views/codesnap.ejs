@@ -1,0 +1,254 @@
+<%- /* content block for layout */ '' %>
+<% var content = ''; %>
+
+<div>
+  <div class="mb-6">
+    <a href="/" class="text-sm text-blue-500 hover:text-blue-700">&larr; 返回首页</a>
+  </div>
+
+  <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 md:p-8">
+    <div class="flex items-center gap-3 mb-4">
+      <span class="text-3xl"><%- tool.icon %></span>
+      <div>
+        <h1 class="text-2xl font-bold text-gray-800"><%- tool.name %></h1>
+        <p class="text-sm text-gray-500"><%- tool.desc %></p>
+      </div>
+    </div>
+
+    <div class="border-t border-gray-100 pt-6 mt-2">
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">代码</label>
+          <textarea id="code-input" rows="8" class="w-full border border-gray-300 rounded-lg p-3 font-mono text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" placeholder="粘贴代码..." oninput="generateCard()">function hello() {
+  console.log("Hello, World!");
+}</textarea>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-2">预览</label>
+          <div id="card-preview" class="rounded-xl overflow-hidden shadow-lg bg-gray-900 p-4 text-sm font-mono text-green-400 whitespace-pre-wrap"></div>
+        </div>
+      </div>
+
+      <div class="flex flex-wrap gap-3 mb-4">
+        <div>
+          <label class="block text-xs font-medium text-gray-700 mb-1">主题</label>
+          <select id="theme-select" class="px-3 py-2 border border-gray-300 rounded-lg text-sm" onchange="generateCard()">
+            <option value="nord">Nord</option>
+            <option value="monokai" selected>Monokai</option>
+            <option value="dracula">Dracula</option>
+            <option value="github">GitHub Light</option>
+            <option value="solarized">Solarized</option>
+            <option value="one-dark">One Dark</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-gray-700 mb-1">背景</label>
+          <select id="bg-select" class="px-3 py-2 border border-gray-300 rounded-lg text-sm" onchange="generateCard()">
+            <option value="none">无</option>
+            <option value="gradient-blue">蓝紫渐变</option>
+            <option value="gradient-sunset" selected>日落渐变</option>
+            <option value="gradient-green">墨绿渐变</option>
+            <option value="gradient-pink">粉紫渐变</option>
+            <option value="carbon">Carbon 默认</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-gray-700 mb-1">语言</label>
+          <select id="lang-select" class="px-3 py-2 border border-gray-300 rounded-lg text-sm" onchange="generateCard()">
+            <option value="js">JavaScript</option>
+            <option value="py">Python</option>
+            <option value="go">Go</option>
+            <option value="rs">Rust</option>
+            <option value="java">Java</option>
+            <option value="ts">TypeScript</option>
+            <option value="html">HTML</option>
+            <option value="css">CSS</option>
+            <option value="sh">Shell</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-gray-700 mb-1">圆角</label>
+          <select id="radius-select" class="px-3 py-2 border border-gray-300 rounded-lg text-sm" onchange="generateCard()">
+            <option value="12">小</option>
+            <option value="20" selected>中</option>
+            <option value="32">大</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="flex flex-wrap gap-2">
+        <button onclick="downloadCardPNG()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium">⬇️ 下载图片</button>
+        <button onclick="copyCardHTML()" class="px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 text-sm font-medium">📋 复制 HTML</button>
+        <button onclick="copyCardCSS()" class="px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 text-sm font-medium">📋 复制 CSS</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const THEMES = {
+  'nord':      { bg: '#2e3440', text: '#88c0d0', keyword: '#81a1c1', string:'#a3be8c', comment:'#616e88' },
+  'monokai':   { bg: '#272822', text: '#f8f8f2', keyword: '#f92672', string:'#e6db74', comment:'#75715e' },
+  'dracula':   { bg: '#282a36', text: '#f8f8f2', keyword: '#ff79c6', string:'#f1fa8c', comment:'#6272a4' },
+  'github':    { bg: '#ffffff', text: '#24292e', keyword: '#d73a49', string:'#032f62', comment:'#6a737d' },
+  'solarized': { bg: '#002b36', text: '#839496', keyword: '#859900', string:'#2aa198', comment:'#586e75' },
+  'one-dark':  { bg: '#1e1e2e', text: '#cdd6f4', keyword: '#cba6f7', string:'#a6e3a1', comment:'#6c7086' },
+};
+
+const GRADIENTS = {
+  'none':             '',
+  'gradient-blue':    'linear-gradient(135deg, #1a1a2e, #16213e, #0f3460)',
+  'gradient-sunset':  'linear-gradient(135deg, #fc5c7d, #6a82fb)',
+  'gradient-green':   'linear-gradient(135deg, #0b3a2d, #1b6b4a, #2d8a5a)',
+  'gradient-pink':    'linear-gradient(135deg, #4a1a3a, #7a2a5a, #b84a7a)',
+  'carbon':           'linear-gradient(135deg, #1e1e1e, #2a2a2a)',
+};
+
+function generateCard() {
+  const code = document.getElementById('code-input').value;
+  const themeName = document.getElementById('theme-select').value;
+  const bgName = document.getElementById('bg-select').value;
+  const radius = document.getElementById('radius-select').value;
+  const lang = document.getElementById('lang-select').value;
+
+  const theme = THEMES[themeName];
+  const gradient = GRADIENTS[bgName];
+
+  const escaped = escapeHtml(code);
+  const highlighted = highlightCode(escaped, theme, lang);
+
+  const bgStyle = gradient ? `background: ${gradient}; padding: 32px;` : '';
+  const cardBg = gradient ? 'rgba(0,0,0,0.3)' : theme.bg;
+
+  const html = `<div style="${bgStyle}display:flex;justify-content:center;align-items:center;font-family:'SF Mono','Fira Code','JetBrains Mono',monospace;">
+  <div style="background:${cardBg};border-radius:${radius}px;padding:24px 24px 8px;max-width:680px;width:100%;backdrop-filter:blur(4px);box-shadow:0 20px 60px rgba(0,0,0,0.3);">
+    <div style="display:flex;gap:8px;margin-bottom:16px;">
+      <span style="width:12px;height:12px;border-radius:50%;background:#ff5f57;"></span>
+      <span style="width:12px;height:12px;border-radius:50%;background:#febc2e;"></span>
+      <span style="width:12px;height:12px;border-radius:50%;background:#28c840;"></span>
+      <span style="flex:1;"></span>
+      <span style="color:rgba(255,255,255,0.3);font-size:11px;font-family:monospace;">${lang.toUpperCase()}</span>
+    </div>
+    <pre style="color:${theme.text};font-size:13px;line-height:1.6;overflow-x:auto;padding-bottom:16px;"><code>${highlighted}</code></pre>
+  </div>
+</div>`.replace(/\n\s*/g, '');
+
+  document.getElementById('card-preview').innerHTML = html;
+}
+
+function highlightCode(code, theme) {
+  // Simple keyword-based syntax highlight
+  const keywords = {
+    js:   ['function','return','const','let','var','if','else','for','while','class','import','export','from','default','async','await','try','catch','throw','new','this','true','false','null','undefined','typeof'],
+    py:   ['def','return','if','else','elif','for','while','import','from','class','self','True','False','None','try','except','raise','with','as','in','not','and','or','lambda','yield'],
+    go:   ['func','return','if','else','for','range','var','type','struct','interface','import','package','defer','go','chan','map','nil','true','false','make','append','len'],
+    rs:   ['fn','let','mut','return','if','else','for','while','match','struct','enum','impl','trait','pub','use','mod','self','true','false','Some','None','Ok','Err','as','in','ref'],
+    java: ['public','private','protected','static','final','class','interface','enum','extends','implements','return','if','else','for','while','new','this','null','true','false','void','int','String','boolean','try','catch','throw','import','package'],
+    ts:   ['function','return','const','let','var','if','else','for','while','class','import','export','from','default','async','await','interface','type','extends','implements','new','this','true','false','null','undefined','enum'],
+    html: [],
+    css:  [],
+    sh:   ['if','then','else','fi','for','do','done','while','function','return','export','local','echo','exit','source'],
+  };
+
+  const kw = keywords[document.getElementById('lang-select').value] || [];
+  const kwSet = new Set(kw);
+
+  // Highlight strings (between quotes)
+  let h = '';
+  let i = 0;
+  while (i < code.length) {
+    if (code[i] === '"' || code[i] === "'" || code[i] === '`') {
+      const quote = code[i];
+      let s = quote;
+      i++;
+      while (i < code.length && code[i] !== quote) {
+        if (code[i] === '\\') { s += '\\' + (code[i+1]||''); i+=2; continue; }
+        s += code[i]; i++;
+      }
+      s += quote; i++;
+      h += `<span style="color:${theme.string}">${s}</span>`;
+    } else if (/[a-zA-Z_$]/.test(code[i])) {
+      let word = '';
+      while (i < code.length && /[a-zA-Z0-9_$]/.test(code[i])) { word += code[i]; i++; }
+      if (kwSet.has(word)) h += `<span style="color:${theme.keyword};font-weight:500">${word}</span>`;
+      else h += word;
+    } else if (code[i] === '/' && code[i+1] === '/') {
+      let s = '//';
+      i += 2;
+      while (i < code.length && code[i] !== '\n') { s += code[i]; i++; }
+      h += `<span style="color:${theme.comment};font-style:italic">${s}</span>`;
+    } else if (code[i] === '/' && code[i+1] === '*') {
+      let s = '/*';
+      i += 2;
+      while (i < code.length && !(code[i] === '*' && code[i+1] === '/')) { s += code[i]; i++; }
+      s += '*/'; i += 2;
+      h += `<span style="color:${theme.comment};font-style:italic">${s}</span>`;
+    } else if (code[i] === '#' && ['py','sh'].includes(document.getElementById('lang-select').value)) {
+      let s = '#';
+      i++;
+      while (i < code.length && code[i] !== '\n') { s += code[i]; i++; }
+      h += `<span style="color:${theme.comment};font-style:italic">${s}</span>`;
+    } else {
+      h += code[i]; i++;
+    }
+  }
+  return h;
+}
+
+function escapeHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+async function downloadCardPNG() {
+  const preview = document.getElementById('card-preview');
+  const canvas = document.createElement('canvas');
+  const ctx = canvas.getContext('2d');
+
+  // Render the preview HTML to an image using foreignObject
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="800" height="600">
+    <foreignObject width="100%" height="100%">
+      <div xmlns="http://www.w3.org/1999/xhtml">
+        ${preview.innerHTML}
+      </div>
+    </foreignObject>
+  </svg>`;
+
+  const img = new Image();
+  const blob = new Blob([svg], {type: 'image/svg+xml;charset=utf-8'});
+  const url = URL.createObjectURL(blob);
+
+  img.onload = function() {
+    canvas.width = Math.min(img.width * 2, 1600);
+    canvas.height = Math.min(img.height * 2, 1200);
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+    const link = document.createElement('a');
+    link.download = 'code-snippet.png';
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+  img.src = url;
+}
+
+function copyCardHTML() {
+  const html = document.getElementById('card-preview').innerHTML;
+  navigator.clipboard.writeText(html).then(() => {
+    const btn = document.querySelector('[onclick^="copyCardHTML"]');
+    btn.textContent = '✅ 已复制';
+    setTimeout(() => btn.textContent = '📋 复制 HTML', 1500);
+  });
+}
+
+function copyCardCSS() {
+  const el = document.getElementById('card-preview').firstElementChild;
+  const styles = window.getComputedStyle(el);
+  let css = `/* Code Card Styles */\nbackground: ${styles.background};\nborder-radius: ${styles.borderRadius};\npadding: 24px;\nfont-family: 'SF Mono', 'Fira Code', monospace;\n`;
+  navigator.clipboard.writeText(css).then(() => {
+    const btn = document.querySelector('[onclick^="copyCardCSS"]');
+    btn.textContent = '✅ 已复制';
+    setTimeout(() => btn.textContent = '📋 复制 CSS', 1500);
+  });
+}
+
+generateCard();
+</script>

@@ -1,0 +1,199 @@
+<%- /* content block for layout */ '' %>
+<% var content = ''; %>
+
+<div>
+  <div class="mb-6">
+    <a href="/" class="text-sm text-blue-500 hover:text-blue-700">&larr; 返回首页</a>
+  </div>
+
+  <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 md:p-8">
+    <div class="flex items-center gap-3 mb-4">
+      <span class="text-3xl"><%- tool.icon %></span>
+      <div>
+        <h1 class="text-2xl font-bold text-gray-800"><%- tool.name %></h1>
+        <p class="text-sm text-gray-500"><%- tool.desc %></p>
+      </div>
+    </div>
+
+    <div class="border-t border-gray-100 pt-6 mt-2">
+      <div class="mb-4">
+        <label class="block text-sm font-medium text-gray-700 mb-1">Mermaid 代码</label>
+        <textarea id="mermaid-input" rows="8" class="w-full border border-gray-300 rounded-lg p-3 font-mono text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" oninput="debounce(renderMermaid, 500)()">graph TD
+    A[开始] --> B{判断}
+    B -->|是| C[处理]
+    B -->|否| D[结束]
+    C --> D</textarea>
+      </div>
+
+      <div class="flex flex-wrap gap-3 mb-4">
+        <div>
+          <label class="block text-xs font-medium text-gray-700 mb-1">主题</label>
+          <select id="mermaid-theme" class="px-3 py-2 border border-gray-300 rounded-lg text-sm" onchange="renderMermaid()">
+            <option value="default">Default</option>
+            <option value="dark">Dark</option>
+            <option value="neutral">Neutral</option>
+            <option value="forest">Forest</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-gray-700 mb-1">方向</label>
+          <select id="mermaid-dir" class="px-3 py-2 border border-gray-300 rounded-lg text-sm" onchange="renderMermaid()">
+            <option value="TB">纵向</option>
+            <option value="LR" selected>横向</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="flex flex-wrap gap-2 mb-4">
+        <button onclick="downloadMermaidSVG()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium">⬇️ 下载 SVG</button>
+        <button onclick="downloadMermaidPNG()" class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 text-sm font-medium">⬇️ 下载 PNG</button>
+        <button class="px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 text-sm" onclick="insertTemplate('graph')">流程图</button>
+        <button class="px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 text-sm" onclick="insertTemplate('sequence')">时序图</button>
+        <button class="px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 text-sm" onclick="insertTemplate('class')">类图</button>
+        <button class="px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 text-sm" onclick="insertTemplate('gantt')">甘特图</button>
+        <button class="px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 text-sm" onclick="insertTemplate('pie')">饼图</button>
+      </div>
+
+      <div class="bg-white border border-gray-200 rounded-lg p-4 min-h-[200px] flex items-center justify-center" id="mermaid-container">
+        <div class="text-gray-400 text-sm" id="mermaid-loading">渲染中...</div>
+        <div id="mermaid-output" class="w-full overflow-x-auto flex justify-center"></div>
+      </div>
+
+      <div id="mermaid-error" class="hidden mt-2 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-600"></div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>
+mermaid.initialize({ startOnLoad: false, securityLevel: 'loose' });
+
+let debounceTimer = null;
+function debounce(fn, ms) {
+  return function() { clearTimeout(debounceTimer); debounceTimer = setTimeout(fn, ms); };
+}
+
+function renderMermaid() {
+  const code = document.getElementById('mermaid-input').value.trim();
+  if (!code) return;
+
+  const theme = document.getElementById('mermaid-theme').value;
+  const dir = document.getElementById('mermaid-dir').value;
+
+  const output = document.getElementById('mermaid-output');
+  const loading = document.getElementById('mermaid-loading');
+  const error = document.getElementById('mermaid-error');
+
+  output.innerHTML = '';
+  error.classList.add('hidden');
+
+  // Inject direction into graph type diagrams
+  let processed = code;
+  if (code.startsWith('graph ')) {
+    const lines = code.split('\n');
+    const first = lines[0];
+    const rest = lines.slice(1).join('\n');
+    if (!first.includes('TB') && !first.includes('LR') && !first.includes('BT') && !first.includes('RL')) {
+      processed = first.replace('graph', `graph ${dir}`) + '\n' + rest;
+    }
+  }
+
+  const id = 'mermaid-' + Date.now();
+
+  mermaid.mermaidAPI.render(id, processed, (svgCode) => {
+    output.innerHTML = svgCode;
+    const svgEl = output.querySelector('svg');
+    if (svgEl) {
+      svgEl.style.maxWidth = '100%';
+      svgEl.style.height = 'auto';
+    }
+    loading.style.display = 'none';
+  }, (err) => {
+    error.classList.remove('hidden');
+    error.textContent = '❌ ' + err.message;
+    loading.style.display = 'none';
+  });
+}
+
+function insertTemplate(type) {
+  const templates = {
+    graph: `graph TD
+    A[开始] --> B{条件}
+    B -->|是| C[动作1]
+    B -->|否| D[动作2]
+    C --> E[结束]
+    D --> E`,
+    sequence: `sequenceDiagram
+    participant 用户
+    participant 系统
+    用户->>系统: 发送请求
+    系统->>系统: 处理中
+    系统-->>用户: 返回结果`,
+    class: `classDiagram
+    class Animal {
+      +String name
+      +move() void
+    }
+    class Dog {
+      +bark() void
+    }
+    Animal <|-- Dog`,
+    gantt: `gantt
+    title 项目计划
+    dateFormat  YYYY-MM-DD
+    section 设计
+    需求分析    :a1, 2024-01-01, 7d
+    原型设计    :a2, after a1, 5d
+    section 开发
+    前端开发    :b1, after a2, 10d
+    后端开发    :b2, after a2, 10d`,
+    pie: `pie title 语言占比
+    "JavaScript" : 40
+    "Python" : 25
+    "Go" : 15
+    "Rust" : 10
+    "其他" : 10`,
+  };
+  document.getElementById('mermaid-input').value = templates[type] || '';
+  renderMermaid();
+}
+
+function downloadMermaidSVG() {
+  const svg = document.getElementById('mermaid-output').querySelector('svg');
+  if (!svg) return;
+  const html = new XMLSerializer().serializeToString(svg);
+  const blob = new Blob([html], {type: 'image/svg+xml'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'diagram.svg'; a.click();
+  URL.revokeObjectURL(url);
+}
+
+function downloadMermaidPNG() {
+  const svg = document.getElementById('mermaid-output').querySelector('svg');
+  if (!svg) return;
+  const html = new XMLSerializer().serializeToString(svg);
+  const canvas = document.createElement('canvas');
+  const ctx = canvas.getContext('2d');
+  const img = new Image();
+  const blob = new Blob([html], {type: 'image/svg+xml;charset=utf-8'});
+  const url = URL.createObjectURL(blob);
+
+  img.onload = function() {
+    canvas.width = img.width * 2;
+    canvas.height = img.height * 2;
+    ctx.scale(2, 2);
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, img.width, img.height);
+    ctx.drawImage(img, 0, 0);
+    const link = document.createElement('a');
+    link.download = 'diagram.png';
+    link.href = canvas.toDataURL('image/png');
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+  img.src = url;
+}
+
+renderMermaid();
+</script>
