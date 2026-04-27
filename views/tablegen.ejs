@@ -1,0 +1,183 @@
+<%- /* content block for layout */ '' %>
+<% var content = ''; %>
+
+<div>
+  <div class="mb-6">
+    <a href="/" class="text-sm text-blue-500 hover:text-blue-700">&larr; 返回首页</a>
+  </div>
+
+  <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 md:p-8">
+    <div class="flex items-center gap-3 mb-4">
+      <span class="text-3xl"><%- tool.icon %></span>
+      <div>
+        <h1 class="text-2xl font-bold text-gray-800"><%- tool.name %></h1>
+        <p class="text-sm text-gray-500"><%- tool.desc %></p>
+      </div>
+    </div>
+
+    <div class="border-t border-gray-100 pt-6 mt-2">
+      <div class="flex flex-wrap gap-2 mb-4">
+        <button onclick="createTable()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium">📊 生成表格</button>
+        <button onclick="previewHtml()" class="px-4 py-2 bg-gray-800 text-white rounded-lg hover:bg-gray-900 text-sm font-medium">👁️ HTML 预览</button>
+        <button onclick="copyResult()" class="px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 text-sm font-medium">📋 复制</button>
+        <button onclick="clearAll()" class="px-4 py-2 bg-white border border-gray-300 text-gray-500 rounded-lg hover:bg-gray-50 text-sm font-medium">清空</button>
+      </div>
+
+      <div class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-4">
+        <div>
+          <label class="block text-xs font-medium text-gray-700 mb-1">行数</label>
+          <input id="tbl-rows" type="number" min="1" max="50" value="5" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-gray-700 mb-1">列数</label>
+          <input id="tbl-cols" type="number" min="1" max="20" value="4" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-gray-700 mb-1">表头</label>
+          <input id="tbl-header" type="text" value="名称,数量,单价,总计" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-gray-700 mb-1">样式</label>
+          <select id="tbl-style" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
+            <option value="md">Markdown</option>
+            <option value="html">HTML</option>
+            <option value="grid">Grid (空格对齐)</option>
+          </select>
+        </div>
+        <div class="flex items-end">
+          <label class="flex items-center gap-1 text-xs text-gray-600">
+            <input type="checkbox" id="tbl-border" checked> 边框
+          </label>
+        </div>
+      </div>
+
+      <div class="mb-4">
+        <label class="block text-sm font-medium text-gray-700 mb-1">表格数据（每行用逗号分隔）</label>
+        <textarea id="tbl-data" rows="6" class="w-full border border-gray-300 rounded-lg p-3 font-mono text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" spellcheck="false">商品A,10,29.9,299
+商品B,5,99,495
+商品C,20,15.5,310
+商品D,8,199,1592
+商品E,3,599,1797</textarea>
+      </div>
+
+      <div id="tbl-output-section" class="hidden">
+        <label class="block text-sm font-medium text-gray-700 mb-1">输出</label>
+        <textarea id="tbl-output" rows="12" class="w-full border border-gray-300 rounded-lg p-3 font-mono text-sm bg-gray-50 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" readonly></textarea>
+      </div>
+
+      <div id="tbl-preview-section" class="hidden mt-4">
+        <label class="block text-sm font-medium text-gray-700 mb-1">HTML 预览</label>
+        <div id="tbl-preview" class="w-full border border-gray-300 rounded-lg p-4 bg-white overflow-x-auto"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+function createTable() {
+  const rows = parseInt(document.getElementById('tbl-rows').value) || 5;
+  const cols = parseInt(document.getElementById('tbl-cols').value) || 4;
+  const headerStr = document.getElementById('tbl-header').value;
+  const dataStr = document.getElementById('tbl-data').value;
+  const style = document.getElementById('tbl-style').value;
+  const bordered = document.getElementById('tbl-border').checked;
+
+  const headers = headerStr.split(',').map(s => s.trim()).slice(0, cols);
+  const dataLines = dataStr.split('\n').map(l => l.trim()).filter(l => l).slice(0, rows);
+  const data = dataLines.map(l => l.split(',').map(s => s.trim()).slice(0, cols));
+
+  // Pad headers
+  while (headers.length < cols) headers.push(`Col ${headers.length + 1}`);
+
+  // Pad data rows
+  for (const row of data) {
+    while (row.length < cols) row.push('');
+  }
+
+  const output = document.getElementById('tbl-output-section');
+  const previewSection = document.getElementById('tbl-preview-section');
+  output.classList.remove('hidden');
+  previewSection.classList.add('hidden');
+
+  if (style === 'md') {
+    output.value = generateMarkdown(headers, data, bordered);
+  } else if (style === 'html') {
+    output.value = generateHtml(headers, data, bordered);
+    previewSection.classList.remove('hidden');
+    document.getElementById('tbl-preview').innerHTML = generateHtml(headers, data, true);
+  } else {
+    output.value = generateGrid(headers, data);
+  }
+}
+
+function generateMarkdown(headers, data, bordered) {
+  const sep = bordered ? '|' : '';
+  const gap = bordered ? '|' : '';
+  let result = '';
+
+  // Header
+  result += sep + headers.map(h => ` ${h} `).join(gap) + sep + '\n';
+  result += sep + headers.map(() => ' --- ').join(gap) + sep + '\n';
+
+  // Data
+  for (const row of data) {
+    result += sep + row.map(c => ` ${c} `).join(gap) + sep + '\n';
+  }
+
+  return result;
+}
+
+function generateHtml(headers, data, bordered) {
+  const borderStyle = bordered ? ' border:1px solid #ddd;' : '';
+  let html = '<table style="border-collapse:collapse;width:100%;font-size:14px">';
+  html += '<thead><tr>';
+  for (const h of headers) {
+    html += `<th style="background:#f3f4f6;padding:8px 12px;text-align:left;font-weight:600;${borderStyle}">${escapeHtml(h)}</th>`;
+  }
+  html += '</tr></thead><tbody>';
+  for (let i = 0; i < data.length; i++) {
+    const bg = i % 2 === 0 ? '' : ' background:#f9fafb;';
+    html += '<tr>';
+    for (const c of data[i]) {
+      html += `<td style="padding:8px 12px;${bg}${borderStyle}">${escapeHtml(c)}</td>`;
+    }
+    html += '</tr>';
+  }
+  html += '</tbody></table>';
+  return html;
+}
+
+function generateGrid(headers, data) {
+  const allRows = [headers, ...data];
+  const colWidths = Array(headers.length).fill(0);
+  for (const row of allRows) {
+    for (let i = 0; i < row.length; i++) {
+      colWidths[i] = Math.max(colWidths[i], String(row[i] || '').length);
+    }
+  }
+  return allRows.map(row =>
+    row.map((c, i) => String(c || '').padEnd(colWidths[i])).join('  ')
+  ).join('\n');
+}
+
+function previewHtml() {
+  createTable();
+}
+
+function copyResult() {
+  const text = document.getElementById('tbl-output').value;
+  if (!text) return;
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = document.querySelector('[onclick="copyResult()"]');
+    btn.textContent = '✅ 已复制';
+    setTimeout(() => btn.textContent = '📋 复制', 1500);
+  });
+}
+
+function clearAll() {
+  document.getElementById('tbl-output-section').classList.add('hidden');
+  document.getElementById('tbl-preview-section').classList.add('hidden');
+}
+
+function escapeHtml(s) { return String(s).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[m]); }
+</script>
