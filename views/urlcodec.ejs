@@ -1,0 +1,160 @@
+<%- /* content block for layout */ '' %>
+<% var content = ''; %>
+
+<div>
+  <div class="mb-6">
+    <a href="/" class="text-sm text-blue-500 hover:text-blue-700">&larr; 返回首页</a>
+  </div>
+
+  <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 md:p-8">
+    <div class="flex items-center gap-3 mb-4">
+      <span class="text-3xl"><%- tool.icon %></span>
+      <div>
+        <h1 class="text-2xl font-bold text-gray-800"><%- tool.name %></h1>
+        <p class="text-sm text-gray-500"><%- tool.desc %></p>
+      </div>
+    </div>
+
+    <div class="border-t border-gray-100 pt-6 mt-2">
+      <div class="mb-4">
+        <label class="block text-sm font-medium text-gray-700 mb-1">输入内容</label>
+        <textarea id="url-input" rows="6" class="w-full border border-gray-300 rounded-lg p-3 font-mono text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="输入需要编码或解码的文本/URL..."></textarea>
+      </div>
+
+      <div class="flex flex-wrap gap-2 mb-6">
+        <div class="flex gap-1 border border-gray-300 rounded-lg overflow-hidden">
+          <button onclick="setMode('encode')" id="mode-encode" class="px-4 py-2 text-sm font-medium bg-blue-600 text-white">编码</button>
+          <button onclick="setMode('decode')" id="mode-decode" class="px-4 py-2 text-sm font-medium bg-white text-gray-700 hover:bg-gray-50">解码</button>
+        </div>
+        <button onclick="processURL()" class="px-5 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium">执行</button>
+        <button onclick="copyResult()" class="px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 text-sm font-medium">复制结果</button>
+        <button onclick="clearURL()" class="px-4 py-2 bg-white border border-gray-300 text-gray-500 rounded-lg hover:bg-gray-50 text-sm font-medium">清空</button>
+      </div>
+
+      <div class="mb-4 p-3 bg-blue-50 border border-blue-200 text-blue-700 text-sm rounded-lg">
+        💡 <strong>编码</strong>：将特殊字符转为 URL 安全格式（如 中文 → %E4%B8%AD%E6%96%87）<br>
+        💡 <strong>解码</strong>：将 URL 编码还原为原始字符
+      </div>
+
+      <!-- Error -->
+      <div id="url-error" class="hidden mb-4 p-3 bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg"></div>
+
+      <!-- Result -->
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">结果</label>
+        <pre id="url-output" class="w-full min-h-[100px] border border-gray-300 rounded-lg p-3 font-mono text-sm bg-gray-50 overflow-auto whitespace-pre-wrap"></pre>
+      </div>
+
+      <!-- URL 解析器 -->
+      <div id="url-parser-section" class="hidden mt-6 border-t border-gray-100 pt-6">
+        <h3 class="text-lg font-semibold text-gray-700 mb-3">🌐 URL 解析</h3>
+        <div id="url-parsed" class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm font-mono"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+let currentMode = 'encode';
+
+function setMode(mode) {
+  currentMode = mode;
+  document.getElementById('mode-encode').className = mode === 'encode'
+    ? 'px-4 py-2 text-sm font-medium bg-blue-600 text-white'
+    : 'px-4 py-2 text-sm font-medium bg-white text-gray-700 hover:bg-gray-50';
+  document.getElementById('mode-decode').className = mode === 'decode'
+    ? 'px-4 py-2 text-sm font-medium bg-blue-600 text-white'
+    : 'px-4 py-2 text-sm font-medium bg-white text-gray-700 hover:bg-gray-50';
+  processURL();
+}
+
+function processURL() {
+  const input = document.getElementById('url-input').value;
+  const errEl = document.getElementById('url-error');
+  const output = document.getElementById('url-output');
+  const parserSection = document.getElementById('url-parser-section');
+  const parsedDiv = document.getElementById('url-parsed');
+
+  errEl.classList.add('hidden');
+  parserSection.classList.add('hidden');
+
+  if (!input) {
+    output.textContent = '';
+    return;
+  }
+
+  try {
+    let result;
+    if (currentMode === 'encode') {
+      result = encodeURIComponent(input);
+    } else {
+      result = decodeURIComponent(input);
+    }
+    output.textContent = result;
+
+    // 尝试解析 URL 组件
+    if (currentMode === 'decode' || !/%[0-9A-F]{2}/i.test(input)) {
+      try {
+        const url = new URL(result);
+        parsedDiv.innerHTML = '';
+        const parts = [
+          { k: '协议', v: url.protocol },
+          { k: '主机', v: url.hostname + (url.port ? ':' + url.port : '') },
+          { k: '端口', v: url.port || '(默认)' },
+          { k: '路径', v: url.pathname },
+          { k: '查询参数', v: url.search || '(无)' },
+          { k: '哈希', v: url.hash || '(无)' },
+        ];
+        parts.forEach(p => {
+          parsedDiv.innerHTML += '<div class="flex"><span class="text-gray-500 w-20 shrink-0">' + p.k + ':</span><span class="text-gray-800 break-all">' + escapeHtml(p.v) + '</span></div>';
+        });
+
+        // 解析查询参数
+        if (url.searchParams && url.searchParams.size > 0) {
+          parsedDiv.innerHTML += '<div class="col-span-2 mt-2 border-t border-gray-100 pt-2"><span class="text-gray-500 text-xs font-semibold">查询参数:</span></div>';
+          url.searchParams.forEach((val, key) => {
+            parsedDiv.innerHTML += '<div class="flex pl-5"><span class="text-gray-600 w-20 shrink-0">' + escapeHtml(key) + ':</span><span class="text-gray-800 break-all">' + escapeHtml(val) + '</span></div>';
+          });
+        }
+
+        parserSection.classList.remove('hidden');
+      } catch (e) {
+        // 不是合法 URL，不显示解析
+      }
+    }
+  } catch (e) {
+    errEl.textContent = '❌ ' + (currentMode === 'encode' ? '编码' : '解码') + '失败: ' + e.message;
+    if (currentMode === 'decode') {
+      errEl.textContent += '。输入可能不是有效的 URL 编码格式。';
+    }
+    errEl.classList.remove('hidden');
+    output.textContent = '';
+  }
+}
+
+function copyResult() {
+  const text = document.getElementById('url-output').textContent;
+  if (!text) return;
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = event.target;
+    btn.textContent = '✅ 已复制';
+    setTimeout(() => btn.textContent = '复制结果', 1500);
+  });
+}
+
+function clearURL() {
+  document.getElementById('url-input').value = '';
+  document.getElementById('url-output').textContent = '';
+  document.getElementById('url-error').classList.add('hidden');
+  document.getElementById('url-parser-section').classList.add('hidden');
+}
+
+function escapeHtml(str) {
+  return String(str).replace(/[&<>"']/g, function(m) {
+    return {'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[m];
+  });
+}
+
+// 自动处理
+document.getElementById('url-input').addEventListener('input', processURL);
+</script>

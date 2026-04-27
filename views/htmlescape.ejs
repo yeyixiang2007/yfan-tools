@@ -1,0 +1,195 @@
+<%- /* content block for layout */ '' %>
+<% var content = ''; %>
+
+<div>
+  <div class="mb-6">
+    <a href="/" class="text-sm text-blue-500 hover:text-blue-700">&larr; 返回首页</a>
+  </div>
+
+  <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 md:p-8">
+    <div class="flex items-center gap-3 mb-4">
+      <span class="text-3xl"><%- tool.icon %></span>
+      <div>
+        <h1 class="text-2xl font-bold text-gray-800"><%- tool.name %></h1>
+        <p class="text-sm text-gray-500"><%- tool.desc %></p>
+      </div>
+    </div>
+
+    <div class="border-t border-gray-100 pt-6 mt-2">
+      <div class="mb-4">
+        <label class="block text-sm font-medium text-gray-700 mb-1">输入内容</label>
+        <textarea id="html-input" rows="8" class="w-full border border-gray-300 rounded-lg p-3 font-mono text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="输入需要编码或解码的 HTML 文本..." oninput="autoProcess()"></textarea>
+      </div>
+
+      <div class="flex flex-wrap gap-2 mb-6">
+        <div class="flex gap-1 border border-gray-300 rounded-lg overflow-hidden">
+          <button onclick="setHtmlMode('encode')" id="html-mode-encode" class="px-4 py-2 text-sm font-medium bg-blue-600 text-white">编码</button>
+          <button onclick="setHtmlMode('decode')" id="html-mode-decode" class="px-4 py-2 text-sm font-medium bg-white text-gray-700 hover:bg-gray-50">解码</button>
+        </div>
+        <button onclick="processHtml()" class="px-5 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium">执行</button>
+        <button onclick="copyHtmlResult()" class="px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 text-sm font-medium">复制结果</button>
+        <button onclick="clearHtml()" class="px-4 py-2 bg-white border border-gray-300 text-gray-500 rounded-lg hover:bg-gray-50 text-sm font-medium">清空</button>
+      </div>
+
+      <div class="mb-4 p-3 bg-blue-50 border border-blue-200 text-blue-700 text-sm rounded-lg">
+        💡 <strong>编码</strong>：将 &lt; &gt; &amp; &quot; &#39; 等转为 HTML 实体<br>
+        💡 <strong>解码</strong>：将 HTML 实体还原为原始字符<br>
+        💡 支持所有标准 HTML 实体（&amp;nbsp; &amp;lt; &amp;gt; &amp;amp; &amp;quot; &amp;#39; 等）
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <!-- 结果 -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">结果</label>
+          <pre id="html-output" class="w-full min-h-[150px] border border-gray-300 rounded-lg p-3 font-mono text-sm bg-gray-50 overflow-auto whitespace-pre-wrap"></pre>
+        </div>
+        <!-- 预览 -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">预览</label>
+          <div id="html-preview" class="w-full min-h-[150px] border border-gray-300 rounded-lg p-3 text-sm bg-white overflow-auto"></div>
+        </div>
+      </div>
+
+      <!-- 常用实体速查 -->
+      <div class="mt-6 border-t border-gray-100 pt-4">
+        <details class="group">
+          <summary class="text-sm font-medium text-gray-700 cursor-pointer hover:text-blue-600">📖 常用 HTML 实体速查</summary>
+          <div class="mt-3 overflow-x-auto">
+            <table class="w-full text-xs border-collapse">
+              <thead>
+                <tr class="bg-gray-50">
+                  <th class="px-3 py-2 text-left text-gray-500 border border-gray-200">字符</th>
+                  <th class="px-3 py-2 text-left text-gray-500 border border-gray-200">实体名称</th>
+                  <th class="px-3 py-2 text-left text-gray-500 border border-gray-200">数字编码</th>
+                  <th class="px-3 py-2 text-left text-gray-500 border border-gray-200">描述</th>
+                </tr>
+              </thead>
+              <tbody>
+                <% var entities = [
+                  ['<', '&lt;', '&#60;', '小于号'],
+                  ['>', '&gt;', '&#62;', '大于号'],
+                  ['&', '&amp;', '&#38;', '&符号'],
+                  ['"', '&quot;', '&#34;', '双引号'],
+                  ["'", '&apos;', '&#39;', '单引号'],
+                  [' ', '&nbsp;', '&#160;', '不间断空格'],
+                  ['©', '&copy;', '&#169;', '版权符号'],
+                  ['®', '&reg;', '&#174;', '注册商标'],
+                  ['™', '&trade;', '&#8482;', '商标符号'],
+                  ['€', '&euro;', '&#8364;', '欧元'],
+                  ['£', '&pound;', '&#163;', '英镑'],
+                  ['¥', '&yen;', '&#165;', '日元/人民币'],
+                  ['°', '&deg;', '&#176;', '度数'],
+                  ['±', '&plusmn;', '&#177;', '正负号'],
+                  ['×', '&times;', '&#215;', '乘号'],
+                  ['÷', '&divide;', '&#247;', '除号'],
+                ]; %>
+                <% entities.forEach(function(e) { %>
+                  <tr class="hover:bg-gray-50">
+                    <td class="px-3 py-1.5 border border-gray-200 text-center text-lg"><%- e[0] %></td>
+                    <td class="px-3 py-1.5 border border-gray-200 font-mono"><%- e[1] %></td>
+                    <td class="px-3 py-1.5 border border-gray-200 font-mono"><%- e[2] %></td>
+                    <td class="px-3 py-1.5 border border-gray-200"><%- e[3] %></td>
+                  </tr>
+                <% }); %>
+              </tbody>
+            </table>
+          </div>
+        </details>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+let htmlMode = 'encode';
+
+function setHtmlMode(mode) {
+  htmlMode = mode;
+  document.getElementById('html-mode-encode').className = mode === 'encode'
+    ? 'px-4 py-2 text-sm font-medium bg-blue-600 text-white'
+    : 'px-4 py-2 text-sm font-medium bg-white text-gray-700 hover:bg-gray-50';
+  document.getElementById('html-mode-decode').className = mode === 'decode'
+    ? 'px-4 py-2 text-sm font-medium bg-blue-600 text-white'
+    : 'px-4 py-2 text-sm font-medium bg-white text-gray-700 hover:bg-gray-50';
+  autoProcess();
+}
+
+function autoProcess() {
+  // 防抖
+  clearTimeout(autoProcess._timer);
+  autoProcess._timer = setTimeout(processHtml, 200);
+}
+
+function processHtml() {
+  const input = document.getElementById('html-input').value;
+  const output = document.getElementById('html-output');
+  const preview = document.getElementById('html-preview');
+
+  if (!input) {
+    output.textContent = '';
+    preview.innerHTML = '';
+    return;
+  }
+
+  try {
+    let result;
+    if (htmlMode === 'encode') {
+      result = htmlEncode(input);
+    } else {
+      result = htmlDecode(input);
+    }
+    output.textContent = result;
+
+    // 预览
+    if (htmlMode === 'encode') {
+      preview.textContent = input;
+    } else {
+      preview.innerHTML = result;
+    }
+  } catch (e) {
+    output.textContent = '❌ 处理失败: ' + e.message;
+    preview.innerHTML = '';
+  }
+}
+
+function htmlEncode(str) {
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function htmlDecode(str) {
+  const txt = document.createElement('textarea');
+  txt.innerHTML = str;
+  return txt.value;
+}
+
+function copyHtmlResult() {
+  const text = document.getElementById('html-output').textContent;
+  if (!text) return;
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = event.target;
+    btn.textContent = '✅ 已复制';
+    setTimeout(() => btn.textContent = '复制结果', 1500);
+  });
+}
+
+function clearHtml() {
+  document.getElementById('html-input').value = '';
+  document.getElementById('html-output').textContent = '';
+  document.getElementById('html-preview').innerHTML = '';
+}
+
+// 示例
+function loadExample(type) {
+  if (type === 'encode') {
+    document.getElementById('html-input').value = '<div class="container">\n  <h1>Hello & Welcome!</h1>\n  <p>User\'s name: "Jimmy"</p>\n  <a href="https://yfan.space">Visit yfan.space</a>\n</div>';
+  } else {
+    document.getElementById('html-input').value = '&lt;div class=&quot;container&quot;&gt;\n  &lt;h1&gt;Hello &amp; Welcome!&lt;/h1&gt;\n  &lt;p&gt;User&#39;s name: &quot;Jimmy&quot;&lt;/p&gt;\n&lt;/div&gt;';
+  }
+  processHtml();
+}
+</script>

@@ -1,0 +1,171 @@
+<div>
+  <div class="mb-6">
+    <a href="/" class="text-sm text-blue-500 hover:text-blue-700">&larr; 返回首页</a>
+  </div>
+
+  <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 md:p-8">
+    <div class="flex items-center gap-3 mb-4">
+      <span class="text-3xl"><%- tool.icon %></span>
+      <div>
+        <h1 class="text-2xl font-bold text-gray-800"><%- tool.name %></h1>
+        <p class="text-sm text-gray-500"><%- tool.desc %></p>
+      </div>
+    </div>
+
+    <div class="border-t border-gray-100 pt-6 mt-2">
+      <!-- 拖拽上传区 -->
+      <div id="drop-zone" class="mb-4 border-2 border-dashed border-gray-300 rounded-lg p-6 text-center text-gray-400 text-sm cursor-pointer hover:border-blue-400 hover:text-blue-500 transition" onclick="document.getElementById('file-input').click()" ondragover="this.classList.add('border-blue-500','bg-blue-50')" ondragleave="this.classList.remove('border-blue-500','bg-blue-50')" ondrop="handleDrop(event)">
+        📂 拖拽 JSON 文件到此处，或点击选择文件
+      </div>
+      <input id="file-input" type="file" accept=".json,application/json" class="hidden" onchange="handleFile(this)">
+
+      <!-- Input -->
+      <div class="mb-4">
+        <label class="block text-sm font-medium text-gray-700 mb-1">输入 JSON</label>
+        <textarea id="json-input" rows="10" class="w-full border border-gray-300 rounded-lg p-3 font-mono text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder='{"name": "yfan-tools", "version": "1.0.0"}'></textarea>
+      </div>
+
+      <!-- Input line info -->
+      <div class="text-xs text-gray-400 mb-3" id="line-info">0 行</div>
+
+      <!-- Buttons -->
+      <div class="flex flex-wrap gap-2 mb-4">
+        <button onclick="formatJSON()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium">格式化</button>
+        <button onclick="compressJSON()" class="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 text-sm font-medium">压缩</button>
+        <button onclick="validateJSON()" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm font-medium">校验</button>
+        <button onclick="copyResult()" class="px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 text-sm font-medium">复制结果</button>
+        <button onclick="clearAll()" class="px-4 py-2 bg-white border border-gray-300 text-gray-500 rounded-lg hover:bg-gray-50 text-sm font-medium">清空</button>
+      </div>
+
+      <!-- Error -->
+      <div id="json-error" class="hidden mb-4 p-3 bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg whitespace-pre-wrap"></div>
+
+      <!-- Output -->
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-1">结果</label>
+        <pre id="json-output" class="w-full min-h-[200px] border border-gray-300 rounded-lg p-3 font-mono text-sm bg-gray-50 overflow-auto whitespace-pre-wrap"></pre>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const input = document.getElementById('json-input');
+const errEl = document.getElementById('json-error');
+const output = document.getElementById('json-output');
+const lineInfo = document.getElementById('line-info');
+
+input.addEventListener('input', updateLineInfo);
+
+function updateLineInfo() {
+  const lines = input.value.split('\n').length;
+  lineInfo.textContent = lines + ' 行';
+}
+
+function getInput() { return input.value; }
+
+function setOutput(text) {
+  output.textContent = text;
+  errEl.classList.add('hidden');
+  output.classList.remove('border-red-400', 'bg-red-50');
+}
+
+function showError(msg, lineNum) {
+  errEl.innerHTML = msg;
+  errEl.classList.remove('hidden');
+  output.classList.add('border-red-400', 'bg-red-50');
+  // Scroll to error line in input
+  if (lineNum != null) {
+    const lines = input.value.split('\n');
+    const pos = lines.slice(0, Math.min(lineNum - 1, lines.length)).join('\n').length;
+    input.focus();
+    if (pos >= 0) input.setSelectionRange(pos, pos);
+    input.scrollTop = (lineNum / lines.length) * input.scrollHeight;
+  }
+}
+
+function tryParse(raw) {
+  raw = raw.trim();
+  if (!raw) { showError('⚠️ 请输入 JSON'); return null; }
+  try { return { result: JSON.parse(raw) }; }
+  catch (e) {
+    // Try to extract line number from error message
+    const m = e.message.match(/position\s*(\d+)/i) || e.message.match(/at\s*position\s*(\d+)/i);
+    let line = null;
+    if (m) {
+      const pos = parseInt(m[1]);
+      const text = raw.substring(0, pos);
+      line = (text.match(/\n/g) || []).length + 1;
+    }
+    const lineMsg = line ? ` (第 ${line} 行附近)` : '';
+    showError(`❌ JSON 解析错误${lineMsg}: ${e.message}`, line);
+    return null;
+  }
+}
+
+function formatJSON() {
+  const raw = getInput();
+  const r = tryParse(raw);
+  if (r) setOutput(JSON.stringify(r.result, null, 2));
+}
+
+function compressJSON() {
+  const raw = getInput();
+  const r = tryParse(raw);
+  if (r) setOutput(JSON.stringify(r.result));
+}
+
+function validateJSON() {
+  const raw = getInput();
+  if (!raw.trim()) { showError('⚠️ 请输入 JSON'); return; }
+  try { JSON.parse(raw); setOutput('✅ 有效的 JSON'); }
+  catch (e) { showError('❌ 无效的 JSON: ' + e.message); }
+}
+
+function copyResult() {
+  const text = output.textContent;
+  if (!text) return;
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = event.target;
+    const orig = btn.textContent;
+    btn.textContent = '✅ 已复制';
+    setTimeout(() => btn.textContent = orig, 1500);
+  });
+}
+
+function clearAll() {
+  input.value = '';
+  output.textContent = '';
+  errEl.classList.add('hidden');
+  output.classList.remove('border-red-400', 'bg-red-50');
+  updateLineInfo();
+}
+
+// File handling
+function handleDrop(e) {
+  e.preventDefault();
+  document.getElementById('drop-zone').classList.remove('border-blue-500', 'bg-blue-50');
+  const files = e.dataTransfer.files;
+  if (files.length > 0) readJSONFile(files[0]);
+}
+
+function handleFile(el) {
+  if (el.files.length > 0) readJSONFile(el.files[0]);
+  el.value = '';
+}
+
+function readJSONFile(file) {
+  if (!file.name.endsWith('.json') && file.type !== 'application/json') {
+    showError('⚠️ 只支持 .json 文件');
+    return;
+  }
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    input.value = e.target.result;
+    updateLineInfo();
+  };
+  reader.readAsText(file, 'UTF-8');
+}
+
+updateLineInfo();
+</script>

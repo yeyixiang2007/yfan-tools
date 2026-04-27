@@ -1,0 +1,144 @@
+<%- /* content block for layout */ '' %>
+<% var content = ''; %>
+
+<div>
+  <div class="mb-6">
+    <a href="/" class="text-sm text-blue-500 hover:text-blue-700">&larr; 返回首页</a>
+  </div>
+
+  <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 md:p-8">
+    <div class="flex items-center gap-3 mb-4">
+      <span class="text-3xl"><%- tool.icon %></span>
+      <div>
+        <h1 class="text-2xl font-bold text-gray-800"><%- tool.name %></h1>
+        <p class="text-sm text-gray-500"><%- tool.desc %></p>
+      </div>
+    </div>
+
+    <div class="border-t border-gray-100 pt-6 mt-2">
+      <!-- 操作按钮组 -->
+      <div class="flex flex-wrap gap-2 mb-4">
+        <button onclick="sortLines('asc')" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium">⬆ 升序</button>
+        <button onclick="sortLines('desc')" class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 text-sm font-medium">⬇ 降序</button>
+        <button onclick="sortLines('length')" class="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 text-sm font-medium">📏 按长度</button>
+        <button onclick="sortLines('natural')" class="px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 text-sm font-medium">🔢 自然排序</button>
+        <button onclick="sortLines('reverse')" class="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 text-sm font-medium">↔ 反转</button>
+        <button onclick="sortLines('shuffle')" class="px-4 py-2 bg-pink-600 text-white rounded-lg hover:bg-pink-700 text-sm font-medium">🎲 随机打乱</button>
+      </div>
+
+      <div class="flex flex-wrap gap-2 mb-6">
+        <button onclick="sortLines('unique')" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm font-medium">🗑 去重</button>
+        <button onclick="sortLines('unique-sort')" class="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 text-sm font-medium">📋 去重+排序</button>
+        <button onclick="sortLines('trim')" class="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 text-sm font-medium">✂ 去除空白行</button>
+        <button onclick="sortLines('trim-all')" class="px-4 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-800 text-sm font-medium">✂ 去除所有空白</button>
+        <button onclick="sortLines('prefix')" class="px-4 py-2 bg-cyan-600 text-white rounded-lg hover:bg-cyan-700 text-sm font-medium">🔢 添加行号</button>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">输入（每行一项）</label>
+          <textarea id="textsort-input" rows="12" class="w-full border border-gray-300 rounded-lg p-3 font-mono text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none resize-y" placeholder="每行输入一项..." spellcheck="false"></textarea>
+        </div>
+        <div>
+          <div class="flex items-center justify-between mb-1">
+            <label class="block text-sm font-medium text-gray-700">结果</label>
+            <span id="textsort-info" class="text-xs text-gray-400"></span>
+          </div>
+          <pre id="textsort-output" class="w-full min-h-[300px] border border-gray-300 rounded-lg p-3 font-mono text-sm bg-gray-50 overflow-auto whitespace-pre"></pre>
+        </div>
+      </div>
+
+      <div class="flex flex-wrap gap-2">
+        <button onclick="copyTextSort()" class="px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 text-sm font-medium">📋 复制结果</button>
+        <button onclick="clearTextSort()" class="px-4 py-2 bg-white border border-gray-300 text-gray-500 rounded-lg hover:bg-gray-50 text-sm font-medium">清空</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+function getLines() {
+  const text = document.getElementById('textsort-input').value;
+  return text.split('\n');
+}
+
+function setOutput(lines) {
+  const output = document.getElementById('textsort-output');
+  output.textContent = lines.join('\n');
+  updateTextSortInfo(lines);
+}
+
+function updateTextSortInfo(lines) {
+  const info = document.getElementById('textsort-info');
+  const inputLines = getLines();
+  info.textContent = `输入 ${inputLines.length} 行 → 输出 ${lines.length} 行`;
+}
+
+function sortLines(mode) {
+  let lines = getLines();
+  if (!lines.length || (lines.length === 1 && !lines[0])) return;
+
+  switch (mode) {
+    case 'asc':
+      lines.sort((a, b) => a.localeCompare(b, 'zh-CN'));
+      break;
+    case 'desc':
+      lines.sort((a, b) => b.localeCompare(a, 'zh-CN'));
+      break;
+    case 'length':
+      lines.sort((a, b) => a.length - b.length);
+      break;
+    case 'natural':
+      lines.sort((a, b) => a.localeCompare(b, 'zh-CN', { numeric: true }));
+      break;
+    case 'reverse':
+      lines.reverse();
+      break;
+    case 'shuffle':
+      for (let i = lines.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [lines[i], lines[j]] = [lines[j], lines[i]];
+      }
+      break;
+    case 'unique':
+      lines = [...new Set(lines)];
+      break;
+    case 'unique-sort':
+      lines = [...new Set(lines)];
+      lines.sort((a, b) => a.localeCompare(b, 'zh-CN'));
+      break;
+    case 'trim':
+      lines = lines.filter(l => l.trim() !== '');
+      break;
+    case 'trim-all':
+      lines = lines.filter(l => l.trim() !== '');
+      lines = lines.map(l => l.trim());
+      break;
+    case 'prefix':
+      lines = lines.map((l, i) => {
+        const lineNum = String(i + 1);
+        const padding = ' '.repeat(String(lines.length).length - lineNum.length);
+        return padding + lineNum + '. ' + l;
+      });
+      break;
+  }
+
+  setOutput(lines);
+}
+
+function copyTextSort() {
+  const text = document.getElementById('textsort-output').textContent;
+  if (!text) return;
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = event.target;
+    btn.textContent = '✅ 已复制';
+    setTimeout(() => btn.textContent = '📋 复制结果', 1500);
+  });
+}
+
+function clearTextSort() {
+  document.getElementById('textsort-input').value = '';
+  document.getElementById('textsort-output').textContent = '';
+  document.getElementById('textsort-info').textContent = '';
+}
+</script>

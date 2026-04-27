@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= title %></title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="/static/css/app.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🐙</text></svg>">
+</head>
+<body class="bg-gray-50 min-h-screen flex flex-col">
+  <nav class="bg-white shadow-sm border-b border-gray-200">
+    <div class="max-w-6xl mx-auto px-4 py-3 flex items-center gap-4">
+      <a href="/" class="text-xl font-bold text-gray-800 hover:text-blue-600 transition shrink-0">🐙 yfan.tools</a>
+
+      <!-- 全局搜索框 -->
+      <div class="flex-1 max-w-md relative">
+        <input id="nav-search" type="text"
+               class="w-full pl-9 pr-3 py-1.5 text-sm border border-gray-200 rounded-lg
+                      bg-gray-50 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500
+                      outline-none transition placeholder:text-gray-400"
+               placeholder="搜索工具..."
+               autocomplete="off"
+               onfocus="initSearch()"
+               oninput="searchTools(this.value)">
+        <svg class="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+        </svg>
+
+        <!-- 搜索下拉 -->
+        <div id="search-dropdown" class="hidden absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-50 max-h-80 overflow-y-auto"></div>
+      </div>
+
+      <span class="text-sm text-gray-400 hidden sm:inline">小工具集合</span>
+    </div>
+  </nav>
+
+<script>
+// ── 全局搜索 ──
+var searchToolsData = [
+<% if (typeof tools !== 'undefined' && tools) { %>
+  <% tools.forEach(function(t, i) { %>
+    { id: '<%- t.id %>', name: '<%- t.name.replace(/'/g, "\\'") %>', desc: '<%- t.desc.replace(/'/g, "\\'").replace(/</g, "&lt;").replace(/>/g, "&gt;") %>', icon: '<%- t.icon %>' }<%= i < tools.length - 1 ? ',' : '' %>
+  <% }) %>
+<% } %>
+];
+
+var searchInitialized = false;
+var dropdown = document.getElementById('search-dropdown');
+
+function initSearch() {
+  // 如果当前页面没有 tools 数据（如 404 页），尝试从首页获取
+  if (!searchToolsData || searchToolsData.length === 0) {
+    searchToolsData = [
+      { id: 'md2pdf',    name: 'Markdown → PDF',    desc: '将 Markdown 文档转换为格式美观的 PDF',     icon: '📄' },
+      { id: 'markdown',  name: 'Markdown 格式化',     desc: 'Markdown 源码格式化、表格对齐、实时预览',   icon: '📝' },
+      { id: 'base64',    name: 'Base64 编解码',       desc: 'Base64 编码与解码，支持中文',              icon: '🔐' },
+      { id: 'urlcodec',  name: 'URL 编解码',          desc: 'URL 编码与解码，支持参数解析',             icon: '🔗' },
+      { id: 'htmlescape',name: 'HTML 实体转义',       desc: 'HTML 特殊字符编码与解码，支持预览',        icon: '🏷️' },
+      { id: 'baseconv',  name: '进制转换',            desc: '二进制/八进制/十进制/十六进制互转',        icon: '🔢' },
+      { id: 'json',      name: 'JSON 格式化',         desc: 'JSON 格式化、压缩、校验',                  icon: '🔧' },
+      { id: 'diff',      name: '代码 Diff 对比',      desc: '两段文本/代码差异对比，LCS 算法',          icon: '📊' },
+      { id: 'regex',     name: '正则表达式测试',      desc: '正则匹配、替换、高亮预览',                icon: '🔍' },
+      { id: 'cron',      name: 'Cron 表达式生成',     desc: '可视化生成 cron 语法，预览执行时间',       icon: '⏱️' },
+      { id: 'hash',      name: 'Hash 生成器',         desc: 'MD5/SHA-1/SHA-256/SHA-512 哈希计算',      icon: '🔑' },
+      { id: 'jwt',       name: 'JWT 解码器',          desc: '解码 JWT Token，查看 Header/Payload',      icon: '🔐' },
+      { id: 'color',     name: '颜色工具',            desc: 'HEX/RGB/HSL 颜色空间互转',                icon: '🎨' },
+      { id: 'password',  name: '密码生成器',          desc: '可配置的强密码批量生成',                  icon: '🔑' },
+      { id: 'uuid',      name: 'UUID 生成器',         desc: '批量生成 UUID v4/v7',                     icon: '🆔' },
+      { id: 'qrcode',    name: '二维码生成',          desc: '输入文本生成可下载的二维码图片',            icon: '📱' },
+      { id: 'ip',        name: 'IP 信息查询',         desc: '查询 IP 归属地、运营商、ASN 等信息',       icon: '🌐' },
+      { id: 'timestamp', name: '时间戳转换',          desc: 'Unix 时间戳 ↔ 日期时间互转',              icon: '⏰' },
+      { id: 'counter',   name: '文本统计',            desc: '字符、单词、行数、中文字数实时统计',        icon: '📊' },
+      { id: 'textsort',  name: '文本排序/去重',        desc: '升序/降序/去重/打乱/添加行号等',           icon: '📋' },
+    ];
+  }
+}
+
+function searchTools(query) {
+  query = query.toLowerCase().trim();
+
+  if (!query) {
+    dropdown.classList.add('hidden');
+    return;
+  }
+
+  var results = searchToolsData.filter(function(t) {
+    return t.name.toLowerCase().includes(query) ||
+           t.desc.toLowerCase().includes(query);
+  });
+
+  if (results.length === 0) {
+    dropdown.innerHTML = '<div class="px-4 py-6 text-center text-sm text-gray-400">🔍 没有匹配的工具</div>';
+    dropdown.classList.remove('hidden');
+    return;
+  }
+
+  dropdown.innerHTML = results.map(function(t) {
+    return '<a href="/' + t.id + '" class="flex items-center gap-3 px-4 py-2.5 hover:bg-blue-50 transition border-b border-gray-100 last:border-0 group">' +
+           '<span class="text-xl">' + t.icon + '</span>' +
+           '<div class="flex-1 min-w-0">' +
+           '<div class="text-sm font-medium text-gray-800 group-hover:text-blue-600">' + highlightMatch(t.name, query) + '</div>' +
+           '<div class="text-xs text-gray-400 truncate">' + highlightMatch(t.desc, query) + '</div>' +
+           '</div>' +
+           '<span class="text-xs text-blue-500 opacity-0 group-hover:opacity-100 transition">→</span>' +
+           '</a>';
+  }).join('');
+
+  dropdown.classList.remove('hidden');
+}
+
+function highlightMatch(text, query) {
+  if (!query) return text;
+  var idx = text.toLowerCase().indexOf(query);
+  if (idx === -1) return text;
+  return text.substring(0, idx) +
+         '<mark class="bg-yellow-200 text-gray-900 rounded px-0.5">' +
+         text.substring(idx, idx + query.length) +
+         '</mark>' +
+         text.substring(idx + query.length);
+}
+
+// 点击外部关闭下拉
+var searchInput = document.getElementById('nav-search');
+document.addEventListener('click', function(e) {
+  if (dropdown && !e.target.closest('#nav-search') && !e.target.closest('#search-dropdown')) {
+    dropdown.classList.add('hidden');
+  }
+});
+
+// 键盘导航
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') {
+    if (dropdown) dropdown.classList.add('hidden');
+    if (searchInput) searchInput.blur();
+  }
+  // Ctrl/Cmd + K 聚焦搜索
+  if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+    e.preventDefault();
+    if (searchInput) { searchInput.focus(); searchInput.select(); }
+  }
+});
+</script>
+
+  <main class="flex-1 max-w-6xl mx-auto px-4 py-8 w-full">
+    <%- content %>
+  </main>
+
+  <footer class="bg-white border-t border-gray-200 py-6 mt-8">
+    <div class="max-w-4xl mx-auto px-4 text-center text-sm text-gray-400">
+      <p>yfan.tools &copy; <%= new Date().getFullYear() %> &mdash; 用🐙做小工具</p>
+    </div>
+  </footer>
+</body>
+</html>

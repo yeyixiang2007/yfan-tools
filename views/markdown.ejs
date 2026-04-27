@@ -1,0 +1,236 @@
+<%- /* content block for layout */ '' %>
+<% var content = ''; %>
+
+<div>
+  <div class="mb-6">
+    <a href="/" class="text-sm text-blue-500 hover:text-blue-700">&larr; 返回首页</a>
+  </div>
+
+  <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 md:p-8">
+    <div class="flex items-center gap-3 mb-4">
+      <span class="text-3xl"><%- tool.icon %></span>
+      <div>
+        <h1 class="text-2xl font-bold text-gray-800"><%- tool.name %></h1>
+        <p class="text-sm text-gray-500"><%- tool.desc %></p>
+      </div>
+    </div>
+
+    <div class="border-t border-gray-100 pt-6 mt-2">
+      <!-- 操作按钮 -->
+      <div class="flex flex-wrap gap-2 mb-4">
+        <button onclick="formatMarkdown()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium">✨ 格式化</button>
+        <button onclick="copyResult()" class="px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 text-sm font-medium">📋 复制源码</button>
+        <button onclick="togglePreview()" class="px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 text-sm font-medium">👁️ 切换预览</button>
+        <button onclick="clearMd()" class="px-4 py-2 bg-white border border-gray-300 text-gray-500 rounded-lg hover:bg-gray-50 text-sm font-medium">清空</button>
+      </div>
+
+      <!-- 编辑器/预览 -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <div class="flex items-center justify-between mb-1">
+            <label class="block text-sm font-medium text-gray-700">Markdown 源码</label>
+            <span id="md-length" class="text-xs text-gray-400">0 字符</span>
+          </div>
+          <textarea id="md-input" rows="18" class="w-full border border-gray-300 rounded-lg p-3 font-mono text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none resize-y" placeholder="粘贴或输入 Markdown 源码..." spellcheck="false"></textarea>
+        </div>
+        <div>
+          <div class="flex items-center justify-between mb-1">
+            <label class="block text-sm font-medium text-gray-700">实时预览</label>
+            <span class="text-xs text-gray-400" id="preview-toggle"></span>
+          </div>
+          <div id="md-preview" class="w-full min-h-[400px] border border-gray-300 rounded-lg p-4 bg-white overflow-auto prose prose-sm max-w-none"></div>
+        </div>
+      </div>
+
+      <!-- 统计 -->
+      <div class="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs text-gray-500">
+        <div class="p-2 bg-gray-50 rounded flex justify-between">
+          <span>行数</span>
+          <span id="md-lines" class="font-mono">0</span>
+        </div>
+        <div class="p-2 bg-gray-50 rounded flex justify-between">
+          <span>单词</span>
+          <span id="md-words" class="font-mono">0</span>
+        </div>
+        <div class="p-2 bg-gray-50 rounded flex justify-between">
+          <span>标题</span>
+          <span id="md-headings" class="font-mono">0</span>
+        </div>
+        <div class="p-2 bg-gray-50 rounded flex justify-between">
+          <span>代码块</span>
+          <span id="md-codeblocks" class="font-mono">0</span>
+        </div>
+      </div>
+
+      <!-- 源码结果（格式化后） -->
+      <div id="formatted-section" class="hidden mt-4 border-t border-gray-100 pt-4">
+        <div class="flex items-center justify-between mb-1">
+          <label class="block text-sm font-medium text-gray-700">格式化结果</label>
+          <span class="text-xs text-gray-400">缩进整理，表格对齐</span>
+        </div>
+        <pre id="md-formatted" class="w-full min-h-[100px] border border-gray-300 rounded-lg p-3 font-mono text-sm bg-gray-50 overflow-auto whitespace-pre-wrap"></pre>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+
+<script>
+marked.setOptions({ breaks: true, gfm: true });
+
+const mdInput = document.getElementById('md-input');
+const mdPreview = document.getElementById('md-preview');
+const formattedSection = document.getElementById('formatted-section');
+const formattedOutput = document.getElementById('md-formatted');
+
+// ── 实时预览 ──
+mdInput.addEventListener('input', function() {
+  renderPreview();
+  updateStats();
+});
+
+function renderPreview() {
+  const input = mdInput.value;
+  try {
+    mdPreview.innerHTML = marked.parse(input || '*输入内容后实时预览*');
+  } catch(e) {
+    mdPreview.innerHTML = '<p class="text-red-500">⚠️ 渲染错误: ' + e.message + '</p>';
+  }
+}
+
+function updateStats() {
+  const text = mdInput.value;
+  document.getElementById('md-length').textContent = text.length + ' 字符';
+  document.getElementById('md-lines').textContent = text ? text.split('\n').length : 0;
+  document.getElementById('md-words').textContent = text.trim() ? text.trim().split(/\s+/).length : 0;
+  document.getElementById('md-headings').textContent = (text.match(/^#{1,6}\s/gm) || []).length;
+  document.getElementById('md-codeblocks').textContent = (text.match(/```/g) || []).length / 2;
+}
+
+// ── 格式化 ──
+function formatMarkdown() {
+  const raw = mdInput.value;
+  if (!raw.trim()) return;
+
+  let result = raw;
+
+  // 1. 标准化换行 (CRLF → LF)
+  result = result.replace(/\r\n/g, '\n');
+
+  // 2. 表格对齐
+  result = alignTables(result);
+
+  // 3. 代码块前后加空行（如果缺少）
+  result = result.replace(/([^\n])```/g, '$1\n```');
+  result = result.replace(/```([^\n])/g, '```\n$1');
+
+  // 4. 连续的标题/段落之间保持一个空行
+  result = result.replace(/\n{3,}/g, '\n\n');
+
+  // 5. 尾部清理
+  result = result.trimEnd() + '\n';
+
+  // 显示结果
+  formattedOutput.textContent = result;
+  formattedSection.classList.remove('hidden');
+
+  // 替换到输入框
+  mdInput.value = result;
+  renderPreview();
+  updateStats();
+}
+
+function alignTables(text) {
+  // 找到所有 markdown 表格，对齐列宽
+  return text.replace(/(^\|.+\|\n\|[-:| ]+\|\n(?:\|.+\|\n?)*)/gm, function(table) {
+    const lines = table.split('\n').filter(l => l.trim());
+    if (lines.length < 2) return table;
+
+    // 解析每一行的列
+    const parsed = lines.map(line => {
+      return line.split('|').slice(1, -1).map(cell => cell.trim());
+    });
+
+    // 每列最大宽度
+    const colWidths = [];
+    parsed.forEach(row => {
+      row.forEach((cell, i) => {
+        colWidths[i] = Math.max(colWidths[i] || 0, cell.length);
+      });
+    });
+
+    // 重新构建对齐行
+    const alignRow = lines[1];
+    const alignParts = alignRow.split('|').slice(1, -1).map(a => a.trim());
+
+    const result = lines.map((line, idx) => {
+      const cells = line.split('|').slice(1, -1).map(c => c.trim());
+      const formatted = cells.map((cell, i) => {
+        if (idx === 1) {
+          // 对齐行 — 保持对齐符号
+          const align = alignParts[i] || '---';
+          return ' ' + align.padEnd(colWidths[i], '-') + ' ';
+        }
+        return ' ' + cell.padEnd(colWidths[i]) + ' ';
+      });
+      return '|' + formatted.join('|') + '|';
+    });
+
+    return result.join('\n');
+  });
+}
+
+// ── 预览切换 ──
+let previewVisible = true;
+function togglePreview() {
+  previewVisible = !previewVisible;
+  mdPreview.style.display = previewVisible ? '' : 'none';
+  const btn = event.target;
+  btn.textContent = previewVisible ? '👁️ 切换预览' : '👁️ 显示预览';
+}
+
+// ── 复制 ──
+function copyResult() {
+  const text = formattedSection.classList.contains('hidden')
+    ? mdInput.value
+    : formattedOutput.textContent;
+  if (!text) return;
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = event.target;
+    btn.textContent = '✅ 已复制';
+    setTimeout(() => btn.textContent = '📋 复制源码', 1500);
+  });
+}
+
+function clearMd() {
+  mdInput.value = '';
+  formattedSection.classList.add('hidden');
+  renderPreview();
+  updateStats();
+}
+
+// 初始渲染
+renderPreview();
+updateStats();
+</script>
+
+<style>
+/* Markdown 预览样式 */
+#md-preview h1 { font-size: 1.8em; font-weight: 700; margin: 0.5em 0 0.3em; }
+#md-preview h2 { font-size: 1.5em; font-weight: 600; margin: 0.5em 0 0.3em; }
+#md-preview h3 { font-size: 1.25em; font-weight: 600; margin: 0.4em 0 0.2em; }
+#md-preview h4 { font-size: 1.1em; font-weight: 600; }
+#md-preview p { margin: 0.5em 0; line-height: 1.7; }
+#md-preview code { background: #f3f4f6; padding: 0.15em 0.3em; border-radius: 3px; font-size: 0.9em; }
+#md-preview pre { background: #1f2937; color: #f3f4f6; padding: 1em; border-radius: 8px; overflow-x: auto; }
+#md-preview pre code { background: none; padding: 0; color: inherit; }
+#md-preview blockquote { border-left: 4px solid #d1d5db; padding-left: 1em; color: #6b7280; margin: 0.5em 0; }
+#md-preview table { border-collapse: collapse; width: 100%; margin: 0.5em 0; }
+#md-preview th, #md-preview td { border: 1px solid #d1d5db; padding: 0.4em 0.6em; text-align: left; }
+#md-preview th { background: #f9fafb; font-weight: 600; }
+#md-preview ul, #md-preview ol { padding-left: 1.5em; margin: 0.5em 0; }
+#md-preview li { margin: 0.2em 0; }
+#md-preview img { max-width: 100%; border-radius: 6px; }
+#md-preview hr { border: none; border-top: 2px solid #e5e7eb; margin: 1em 0; }
+</style>

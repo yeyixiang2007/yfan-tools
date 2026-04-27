@@ -1,0 +1,124 @@
+<%- /* content block for layout */ '' %>
+<% var content = ''; %>
+
+<div>
+  <div class="mb-6">
+    <a href="/" class="text-sm text-blue-500 hover:text-blue-700">&larr; 返回首页</a>
+  </div>
+
+  <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 md:p-8">
+    <div class="flex items-center gap-3 mb-4">
+      <span class="text-3xl"><%- tool.icon %></span>
+      <div>
+        <h1 class="text-2xl font-bold text-gray-800"><%- tool.name %></h1>
+        <p class="text-sm text-gray-500"><%- tool.desc %></p>
+      </div>
+    </div>
+
+    <div class="border-t border-gray-100 pt-6 mt-2">
+      <!-- Input -->
+      <div class="mb-4">
+        <label class="block text-sm font-medium text-gray-700 mb-1">输入文本</label>
+        <textarea id="qr-input" rows="3" class="w-full border border-gray-300 rounded-lg p-3 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="输入要生成二维码的文本或链接..." oninput="generateQR()"></textarea>
+      </div>
+
+      <!-- Options -->
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+        <div>
+          <label class="block text-xs text-gray-500 mb-1">尺寸</label>
+          <select id="qr-size" onchange="generateQR()" class="w-full border border-gray-300 rounded-lg p-2 text-sm">
+            <option value="128">小 (128x128)</option>
+            <option value="256" selected>中 (256x256)</option>
+            <option value="512">大 (512x512)</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-xs text-gray-500 mb-1">前景色</label>
+          <input id="qr-fg" type="color" value="#000000" onchange="generateQR()" class="w-full h-9 border border-gray-300 rounded-lg cursor-pointer">
+        </div>
+        <div>
+          <label class="block text-xs text-gray-500 mb-1">背景色</label>
+          <input id="qr-bg" type="color" value="#ffffff" onchange="generateQR()" class="w-full h-9 border border-gray-300 rounded-lg cursor-pointer">
+        </div>
+        <div>
+          <label class="block text-xs text-gray-500 mb-1">纠错级别</label>
+          <select id="qr-level" onchange="generateQR()" class="w-full border border-gray-300 rounded-lg p-2 text-sm">
+            <option value="L">低 (7%)</option>
+            <option value="M" selected>中 (15%)</option>
+            <option value="Q">较高 (25%)</option>
+            <option value="H">高 (30%)</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- QR Code display -->
+      <div class="flex flex-col items-center mb-4">
+        <div id="qr-canvas" class="bg-gray-50 border border-gray-200 rounded-lg p-4 inline-block">
+          <div id="qrcode-container"></div>
+        </div>
+        <p id="qr-hint" class="text-sm text-gray-400 mt-2">输入文本后自动生成</p>
+      </div>
+
+      <!-- Download -->
+      <div class="flex justify-center">
+        <button onclick="downloadQR()" id="qr-download-btn" class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium disabled:opacity-40 disabled:cursor-not-allowed" disabled>下载 PNG</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+<script>
+let qrCodeInstance = null;
+
+function generateQR() {
+  const text = document.getElementById('qr-input').value.trim();
+  const container = document.getElementById('qrcode-container');
+  const btn = document.getElementById('qr-download-btn');
+
+  // Clear previous
+  container.innerHTML = '';
+  btn.disabled = true;
+
+  if (!text) {
+    document.getElementById('qr-hint').textContent = '输入文本后自动生成';
+    return;
+  }
+
+  const size = parseInt(document.getElementById('qr-size').value);
+  const fg = document.getElementById('qr-fg').value;
+  const bg = document.getElementById('qr-bg').value;
+
+  // QRCode.js uses different levels format
+  const levelMap = { L: 'L', M: 'M', Q: 'Q', H: 'H' };
+  const level = levelMap[document.getElementById('qr-level').value] || 'M';
+
+  qrCodeInstance = new QRCode(container, {
+    text: text,
+    width: size,
+    height: size,
+    colorDark: fg,
+    colorLight: bg,
+    correctLevel: QRCode.CorrectLevel[level]
+  });
+
+  document.getElementById('qr-hint').textContent = '';
+  btn.disabled = false;
+}
+
+function downloadQR() {
+  const img = document.querySelector('#qrcode-container img');
+  const canvas = document.querySelector('#qrcode-container canvas');
+  if (!canvas && !img) return;
+
+  const link = document.createElement('a');
+  if (canvas) {
+    link.download = 'qrcode.png';
+    link.href = canvas.toDataURL('image/png');
+  } else {
+    link.download = 'qrcode.png';
+    link.href = img.src;
+  }
+  link.click();
+}
+</script>

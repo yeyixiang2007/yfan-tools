@@ -1,0 +1,202 @@
+<%- /* content block for layout */ '' %>
+<% var content = ''; %>
+
+<div>
+  <div class="mb-6">
+    <a href="/" class="text-sm text-blue-500 hover:text-blue-700">&larr; 返回首页</a>
+  </div>
+
+  <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 md:p-8">
+    <div class="flex items-center gap-3 mb-4">
+      <span class="text-3xl"><%- tool.icon %></span>
+      <div>
+        <h1 class="text-2xl font-bold text-gray-800"><%- tool.name %></h1>
+        <p class="text-sm text-gray-500"><%- tool.desc %></p>
+      </div>
+    </div>
+
+    <div class="border-t border-gray-100 pt-6 mt-2">
+      <!-- 自动检测 -->
+      <div class="mb-6">
+        <a id="my-ip-btn" class="inline-flex items-center gap-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium cursor-pointer"
+           onclick="lookupMyIP()">
+          📡 查询我的 IP
+        </a>
+      </div>
+
+      <!-- 输入 -->
+      <div class="mb-4">
+        <label class="block text-sm font-medium text-gray-700 mb-1">IP 地址</label>
+        <div class="flex gap-2">
+          <input id="ip-input" type="text" class="flex-1 px-4 py-2 border border-gray-300 rounded-lg font-mono text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" placeholder="例如: 8.8.8.8 或 2001:4860:4860::8888" spellcheck="false">
+          <button onclick="lookupIP()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium">🔍 查询</button>
+        </div>
+      </div>
+
+      <!-- 加载状态 -->
+      <div id="ip-loading" class="hidden text-center py-8">
+        <div class="animate-spin inline-block w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full"></div>
+        <p class="text-sm text-gray-500 mt-2">正在查询...</p>
+      </div>
+
+      <!-- 结果 -->
+      <div id="ip-result" class="hidden space-y-4"></div>
+
+      <!-- 错误 -->
+      <div id="ip-error" class="hidden p-4 bg-red-50 border border-red-200 rounded-lg text-sm text-red-600"></div>
+
+      <!-- 使用说明 -->
+      <div class="mt-8 p-4 bg-gray-50 rounded-lg">
+        <h3 class="text-sm font-semibold text-gray-700 mb-2">💡 说明</h3>
+        <p class="text-xs text-gray-500">数据来源：ip-api.com（非商业用途免费，每日限制 45 次/分钟）。支持 IPv4 和 IPv6 查询。</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+let myIPCache = null;
+
+async function lookupMyIP() {
+  const btn = document.getElementById('my-ip-btn');
+  btn.innerHTML = '⏳ 获取中...';
+  btn.style.pointerEvents = 'none';
+
+  try {
+    // 先获取本机 IP
+    const resp = await fetch('/ip/lookup?myip=1');
+    const data = await resp.json();
+    if (data.ip) {
+      document.getElementById('ip-input').value = data.ip;
+      myIPCache = data.location;
+      await showResult(myIPCache);
+    } else {
+      throw new Error(data.error || '获取失败');
+    }
+  } catch (e) {
+    showError('获取本机 IP 失败: ' + e.message);
+  } finally {
+    btn.innerHTML = '📡 查询我的 IP';
+    btn.style.pointerEvents = 'auto';
+  }
+}
+
+async function lookupIP() {
+  const ip = document.getElementById('ip-input').value.trim();
+  if (!ip) { showError('请输入 IP 地址'); return; }
+
+  const loadingDiv = document.getElementById('ip-loading');
+  const resultDiv = document.getElementById('ip-result');
+  const errorDiv = document.getElementById('ip-error');
+  loadingDiv.classList.remove('hidden');
+  resultDiv.classList.add('hidden');
+  errorDiv.classList.add('hidden');
+
+  try {
+    const resp = await fetch('/ip/lookup?ip=' + encodeURIComponent(ip));
+    const data = await resp.json();
+    loadingDiv.classList.add('hidden');
+
+    if (data.error) {
+      showError(data.error);
+      return;
+    }
+
+    await showResult(data);
+  } catch (e) {
+    loadingDiv.classList.add('hidden');
+    showError('查询失败: ' + e.message);
+  }
+}
+
+async function showResult(data) {
+  const resultDiv = document.getElementById('ip-result');
+  resultDiv.classList.remove('hidden');
+
+  // 经纬度地图链接
+  let mapLink = '';
+  if (data.lat && data.lon) {
+    mapLink = '<a href="https://www.openstreetmap.org/?mlat=' + data.lat + '&mlon=' + data.lon + '&zoom=10" target="_blank" class="text-blue-500 hover:underline text-xs">📍 查看地图</a>';
+  }
+
+  resultDiv.innerHTML = `
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div class="space-y-2">
+        <div class="p-3 bg-blue-50 rounded-lg border border-blue-100">
+          <div class="flex items-center justify-between mb-1">
+            <span class="text-xs text-gray-500">IP 地址</span>
+            <span class="text-xs text-green-600 font-medium">${data.proxy ? '⚠️ 代理' : '✅ 正常'}</span>
+          </div>
+          <div class="text-lg font-mono font-bold text-gray-800">${escapeHtml(data.query || data.ip)}</div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-2">
+          ${infoCard('🌍 国家', data.country || '-')}
+          ${infoCard('🏙️ 城市', (data.city || '-') + ' ' + mapLink)}
+          ${infoCard('🏢 运营商', (data.isp || data.org || '-'))}
+          ${infoCard('🗺️ 地区', (data.regionName || '-'))}
+        </div>
+
+        ${data.as ? infoCard('🆔 ASN', data.as) : ''}
+      </div>
+
+      <div class="space-y-2">
+        <div class="p-3 bg-gray-50 rounded-lg border border-gray-100">
+          <span class="text-xs text-gray-500">IP 详情</span>
+          <div class="mt-2 space-y-1 text-xs font-mono">
+            ${detailRow('IP 类型', data.ipType || (data.query && data.query.includes(':') ? 'IPv6' : 'IPv4'))}
+            ${data.zip ? detailRow('邮编', data.zip) : ''}
+            ${data.timezone ? detailRow('时区', data.timezone) : ''}
+            ${data.lat ? detailRow('纬度', data.lat) : ''}
+            ${data.lon ? detailRow('经度', data.lon) : ''}
+            ${data.reverse ? detailRow('反向 DNS', data.reverse) : ''}
+            ${data.org ? detailRow('组织', data.org) : ''}
+            ${data.mobile !== undefined ? detailRow('移动网络', data.mobile ? '是' : '否') : ''}
+            ${data.hosting !== undefined ? detailRow('托管/机房', data.hosting ? '是' : '否') : ''}
+          </div>
+        </div>
+
+        <div class="p-3 bg-gray-50 rounded-lg border border-gray-100">
+          <div class="flex justify-between items-center">
+            <span class="text-xs text-gray-500">原始 JSON</span>
+            <button onclick="copyJSON()" class="text-xs px-2 py-1 bg-white border border-gray-300 rounded hover:bg-gray-50">📋 复制</button>
+          </div>
+          <pre id="ip-raw-json" class="mt-2 text-xs font-mono text-gray-600 overflow-x-auto">${escapeHtml(JSON.stringify(data, null, 2))}</pre>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function infoCard(label, value) {
+  return '<div class="p-3 bg-gray-50 rounded-lg border border-gray-100">' +
+    '<div class="text-xs text-gray-500 mb-0.5">' + label + '</div>' +
+    '<div class="text-sm font-medium text-gray-800">' + value + '</div>' +
+    '</div>';
+}
+
+function detailRow(k, v) {
+  return '<div class="flex justify-between"><span class="text-gray-400">' + k + '</span><span class="text-gray-700">' + v + '</span></div>';
+}
+
+function copyJSON() {
+  const text = document.getElementById('ip-raw-json').textContent;
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = document.querySelector('#ip-raw-json').parentElement.querySelector('button');
+    btn.textContent = '✅ 已复制';
+    setTimeout(() => { btn.textContent = '📋 复制'; }, 2000);
+  });
+}
+
+function showError(msg) {
+  const errorDiv = document.getElementById('ip-error');
+  errorDiv.textContent = '⚠️ ' + msg;
+  errorDiv.classList.remove('hidden');
+}
+
+function escapeHtml(str) {
+  return String(str).replace(/[&<>"']/g, function(m) {
+    return {'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[m];
+  });
+}
+</script>

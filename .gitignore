@@ -1,0 +1,7 @@
+# yfan-tools
+node_modules/
+.env
+*.log
+
+# Logs
+logs/

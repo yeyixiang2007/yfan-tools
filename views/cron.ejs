@@ -1,0 +1,269 @@
+<%- /* content block for layout */ '' %>
+<% var content = ''; %>
+
+<div>
+  <div class="mb-6">
+    <a href="/" class="text-sm text-blue-500 hover:text-blue-700">&larr; 返回首页</a>
+  </div>
+
+  <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 md:p-8">
+    <div class="flex items-center gap-3 mb-4">
+      <span class="text-3xl"><%- tool.icon %></span>
+      <div>
+        <h1 class="text-2xl font-bold text-gray-800"><%- tool.name %></h1>
+        <p class="text-sm text-gray-500"><%- tool.desc %></p>
+      </div>
+    </div>
+
+    <div class="border-t border-gray-100 pt-6 mt-2">
+      <!-- Cron 表达式输入 -->
+      <div class="mb-6">
+        <label class="block text-sm font-medium text-gray-700 mb-1">Cron 表达式</label>
+        <div class="flex gap-2 items-center">
+          <div class="flex-1 grid grid-cols-5 gap-1">
+            <input id="cron-minute" class="w-full px-2 py-2 border border-gray-300 rounded-lg text-center font-mono text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" placeholder="分" value="*" maxlength="3">
+            <input id="cron-hour" class="w-full px-2 py-2 border border-gray-300 rounded-lg text-center font-mono text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" placeholder="时" value="*" maxlength="3">
+            <input id="cron-dom" class="w-full px-2 py-2 border border-gray-300 rounded-lg text-center font-mono text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" placeholder="日" value="*" maxlength="3">
+            <input id="cron-month" class="w-full px-2 py-2 border border-gray-300 rounded-lg text-center font-mono text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" placeholder="月" value="*" maxlength="3">
+            <input id="cron-dow" class="w-full px-2 py-2 border border-gray-300 rounded-lg text-center font-mono text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" placeholder="周" value="*" maxlength="3">
+          </div>
+          <button onclick="updateFromFields()" class="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium whitespace-nowrap">生成</button>
+        </div>
+        <div class="flex justify-between mt-1 text-xs text-gray-400 font-mono px-1">
+          <span>分 (0-59)</span>
+          <span>时 (0-23)</span>
+          <span>日 (1-31)</span>
+          <span>月 (1-12)</span>
+          <span>周 (0-7, 0=周日)</span>
+        </div>
+      </div>
+
+      <!-- 完整表达式显示 -->
+      <div class="mb-6 p-4 bg-blue-50 border border-blue-100 rounded-lg">
+        <div class="flex items-center justify-between">
+          <div>
+            <span class="text-xs text-gray-500">完整表达式</span>
+            <div id="cron-full" class="text-xl font-bold font-mono text-blue-700 mt-1">* * * * *</div>
+          </div>
+          <button onclick="copyCron()" class="text-xs px-3 py-1.5 bg-white border border-gray-300 rounded hover:bg-gray-50">📋 复制</button>
+        </div>
+      </div>
+
+      <!-- 预设模板 -->
+      <div class="mb-6">
+        <label class="block text-sm font-medium text-gray-700 mb-2">📦 常用模板</label>
+        <div class="flex flex-wrap gap-2">
+          <button onclick="usePreset('*/5 * * * *', '每5分钟')" class="px-3 py-1.5 bg-white border border-gray-300 rounded-lg text-xs hover:bg-blue-50 hover:border-blue-300 transition">每5分钟</button>
+          <button onclick="usePreset('*/30 * * * *', '每30分钟')" class="px-3 py-1.5 bg-white border border-gray-300 rounded-lg text-xs hover:bg-blue-50 hover:border-blue-300 transition">每30分钟</button>
+          <button onclick="usePreset('0 * * * *', '每小时')" class="px-3 py-1.5 bg-white border border-gray-300 rounded-lg text-xs hover:bg-blue-50 hover:border-blue-300 transition">每小时</button>
+          <button onclick="usePreset('0 */6 * * *', '每6小时')" class="px-3 py-1.5 bg-white border border-gray-300 rounded-lg text-xs hover:bg-blue-50 hover:border-blue-300 transition">每6小时</button>
+          <button onclick="usePreset('0 8 * * *', '每天早上8点')" class="px-3 py-1.5 bg-white border border-gray-300 rounded-lg text-xs hover:bg-blue-50 hover:border-blue-300 transition">每天早上8点</button>
+          <button onclick="usePreset('0 9 * * 1-5', '工作日早9点')" class="px-3 py-1.5 bg-white border border-gray-300 rounded-lg text-xs hover:bg-blue-50 hover:border-blue-300 transition">工作日早9点</button>
+          <button onclick="usePreset('0 0 * * 0', '每周日午夜')" class="px-3 py-1.5 bg-white border border-gray-300 rounded-lg text-xs hover:bg-blue-50 hover:border-blue-300 transition">每周日午夜</button>
+          <button onclick="usePreset('0 0 1 * *', '每月1号')" class="px-3 py-1.5 bg-white border border-gray-300 rounded-lg text-xs hover:bg-blue-50 hover:border-blue-300 transition">每月1号</button>
+          <button onclick="usePreset('*/10 8-18 * * 1-5', '工作日每10分钟(8-18点)')" class="px-3 py-1.5 bg-white border border-gray-300 rounded-lg text-xs hover:bg-blue-50 hover:border-blue-300 transition">工作日上午每10分钟</button>
+        </div>
+      </div>
+
+      <!-- 最近执行时间 -->
+      <div class="mb-6">
+        <div class="flex items-center justify-between mb-2">
+          <h3 class="text-sm font-semibold text-gray-700">🕐 最近 5 次执行时间</h3>
+          <span id="cron-desc" class="text-xs text-gray-500"></span>
+        </div>
+        <div id="cron-times" class="space-y-1">
+          <div class="text-sm text-gray-400 py-4 text-center">输入 cron 表达式后点击"生成"</div>
+        </div>
+      </div>
+
+      <!-- Cron 语法速查 -->
+      <div class="p-4 bg-gray-50 rounded-lg">
+        <h3 class="text-sm font-semibold text-gray-700 mb-2">📖 Cron 语法速查</h3>
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
+          <div class="bg-white px-3 py-2 rounded border border-gray-200">
+            <code class="font-bold">*</code>
+            <span class="text-gray-500 ml-1">所有值</span>
+          </div>
+          <div class="bg-white px-3 py-2 rounded border border-gray-200">
+            <code class="font-bold">,</code>
+            <span class="text-gray-500 ml-1">列举 (1,3,5)</span>
+          </div>
+          <div class="bg-white px-3 py-2 rounded border border-gray-200">
+            <code class="font-bold">-</code>
+            <span class="text-gray-500 ml-1">范围 (1-5)</span>
+          </div>
+          <div class="bg-white px-3 py-2 rounded border border-gray-200">
+            <code class="font-bold">/</code>
+            <span class="text-gray-500 ml-1">步长 (*/5)</span>
+          </div>
+        </div>
+        <p class="text-xs text-gray-400 mt-2">标准 5 位 Cron 格式：<code class="font-mono bg-white px-1 rounded">分钟 小时 日 月 星期</code></p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+function getFields() {
+  return [
+    document.getElementById('cron-minute').value || '*',
+    document.getElementById('cron-hour').value || '*',
+    document.getElementById('cron-dom').value || '*',
+    document.getElementById('cron-month').value || '*',
+    document.getElementById('cron-dow').value || '*'
+  ];
+}
+
+function setFields(fields) {
+  document.getElementById('cron-minute').value = fields[0];
+  document.getElementById('cron-hour').value = fields[1];
+  document.getElementById('cron-dom').value = fields[2];
+  document.getElementById('cron-month').value = fields[3];
+  document.getElementById('cron-dow').value = fields[4];
+  updateFromFields();
+}
+
+function getCronExpr(fields) {
+  return fields.join(' ');
+}
+
+function updateFromFields() {
+  const fields = getFields();
+  const expr = getCronExpr(fields);
+  document.getElementById('cron-full').textContent = expr;
+  calculateNextTimes(expr);
+}
+
+function usePreset(expr, desc) {
+  const parts = expr.split(' ');
+  if (parts.length === 5) setFields(parts);
+  document.getElementById('cron-desc').textContent = '← ' + desc;
+  document.getElementById('cron-full').textContent = expr;
+  calculateNextTimes(expr);
+}
+
+function calculateNextTimes(expr) {
+  const timesDiv = document.getElementById('cron-times');
+
+  try {
+    // 解析 cron 表达式
+    const parts = expr.trim().split(/\s+/);
+    if (parts.length !== 5) throw new Error('需要 5 个字段');
+
+    const [minField, hourField, domField, monthField, dowField] = parts;
+
+    // 解析字段的函数
+    function parseField(field, min, max) {
+      if (field === '*') return { all: true };
+      const result = { values: new Set() };
+
+      field.split(',').forEach(part => {
+        if (part.includes('/')) {
+          const [range, stepStr] = part.split('/');
+          const step = parseInt(stepStr);
+          const start = range === '*' ? min : parseInt(range);
+          for (let i = start; i <= max; i += step) result.values.add(i);
+        } else if (part.includes('-')) {
+          const [s, e] = part.split('-').map(Number);
+          for (let i = s; i <= e; i++) result.values.add(i);
+        } else if (part === '*') {
+          result.all = true;
+        } else {
+          result.values.add(parseInt(part));
+        }
+      });
+
+      return result;
+    }
+
+    const mins = parseField(minField, 0, 59);
+    const hours = parseField(hourField, 0, 23);
+    const doms = parseField(domField, 1, 31);
+    const months = parseField(monthField, 1, 12);
+    const dows = parseField(dowField, 0, 7);
+
+    // 检查是否每个字段都只有全部
+    const allSimple = minField === '*' && hourField === '*' && domField === '*' && monthField === '*' && dowField === '*';
+
+    if (allSimple) {
+      timesDiv.innerHTML = '<div class="text-sm text-amber-600 py-2">⚠️ 每分钟执行 — 显示没有意义</div>';
+      return;
+    }
+
+    // 查找最近 5 次执行时间
+    const now = new Date();
+    const results = [];
+
+    // 从当前分钟的下一个分钟开始
+    let current = new Date(now);
+    current.setSeconds(0, 0);
+
+    // 向前看一大段时间找 5 次
+    let maxLoops = 525600; // 一年
+    let loops = 0;
+
+    while (results.length < 5 && loops < maxLoops) {
+      loops++;
+      current.setMinutes(current.getMinutes() + 1);
+
+      const m = current.getMinutes();
+      const h = current.getHours();
+      const d = current.getDate();
+      const mon = current.getMonth() + 1;
+      const w = current.getDay();
+
+      const minMatch = mins.all || mins.values.has(m);
+      const hourMatch = hours.all || hours.values.has(h);
+      const domMatch = doms.all || doms.values.has(d);
+      const monthMatch = months.all || months.values.has(mon);
+      const dowMatch = dows.all || dows.values.has(w) || dows.values.has(w === 0 ? 7 : w);
+
+      if (minMatch && hourMatch && domMatch && monthMatch && dowMatch) {
+        results.push(new Date(current));
+      }
+    }
+
+    if (results.length === 0) {
+      timesDiv.innerHTML = '<div class="text-sm text-red-500 py-2">⚠️ 在一年内找不到匹配的时间</div>';
+      return;
+    }
+
+    const now2 = new Date();
+    timesDiv.innerHTML = results.map((t, i) => {
+      const diff = Math.floor((t - now2) / 60000);
+      let relative;
+      if (diff < 1) relative = '即将执行';
+      else if (diff < 60) relative = diff + ' 分钟后';
+      else if (diff < 1440) relative = Math.floor(diff / 60) + ' 小时后';
+      else relative = Math.floor(diff / 1440) + ' 天后';
+
+      return '<div class="flex items-center justify-between px-3 py-2 bg-gray-50 border border-gray-100 rounded text-sm">' +
+        '<span class="font-mono">' + pad(t.getMonth()+1) + '-' + pad(t.getDate()) + ' ' + pad(t.getHours()) + ':' + pad(t.getMinutes()) + '</span>' +
+        '<span class="text-xs text-gray-400">' + relative + '</span>' +
+        '</div>';
+    }).join('');
+  } catch (e) {
+    timesDiv.innerHTML = '<div class="text-sm text-red-500 py-2">⚠️ Cron 表达式无效: ' + escapeHtml(e.message) + '</div>';
+  }
+}
+
+function pad(n) {
+  return String(n).padStart(2, '0');
+}
+
+function copyCron() {
+  const text = document.getElementById('cron-full').textContent;
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = event.target;
+    const orig = btn.textContent;
+    btn.textContent = '✅ 已复制';
+    setTimeout(() => { btn.textContent = orig; }, 2000);
+  });
+}
+
+function escapeHtml(str) {
+  return String(str).replace(/[&<>"']/g, function(m) {
+    return {'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[m];
+  });
+}
+</script>

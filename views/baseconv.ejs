@@ -1,0 +1,181 @@
+<%- /* content block for layout */ '' %>
+<% var content = ''; %>
+
+<div>
+  <div class="mb-6">
+    <a href="/" class="text-sm text-blue-500 hover:text-blue-700">&larr; 返回首页</a>
+  </div>
+
+  <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 md:p-8">
+    <div class="flex items-center gap-3 mb-4">
+      <span class="text-3xl"><%- tool.icon %></span>
+      <div>
+        <h1 class="text-2xl font-bold text-gray-800"><%- tool.name %></h1>
+        <p class="text-sm text-gray-500"><%- tool.desc %></p>
+      </div>
+    </div>
+
+    <div class="border-t border-gray-100 pt-6 mt-2">
+      <!-- 输入 -->
+      <div class="mb-6">
+        <div class="flex items-end gap-3 mb-2">
+          <div class="flex-1">
+            <label class="block text-sm font-medium text-gray-700 mb-1">输入值</label>
+            <input id="base-input" type="text" class="w-full border border-gray-300 rounded-lg p-3 font-mono text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="输入要转换的值" oninput="convertFromInput()">
+          </div>
+          <div>
+            <label class="block text-xs text-gray-500 mb-1">输入进制</label>
+            <select id="base-from" class="border border-gray-300 rounded-lg text-sm p-3 bg-white" onchange="convertFromInput()">
+              <option value="2">二进制 (2)</option>
+              <option value="8">八进制 (8)</option>
+              <option value="10" selected>十进制 (10)</option>
+              <option value="16">十六进制 (16)</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- 结果 -->
+      <div class="space-y-3">
+        <div class="flex items-center gap-2 p-3 bg-gray-50 border border-gray-200 rounded-lg hover:bg-white transition cursor-pointer group" onclick="copyBaseResult('bin')">
+          <span class="text-xs font-bold text-gray-400 w-24 shrink-0">二进制 (2)</span>
+          <code id="base-bin" class="flex-1 font-mono text-sm break-all text-gray-800">—</code>
+          <span class="text-xs text-blue-500 opacity-0 group-hover:opacity-100 transition">📋 复制</span>
+        </div>
+
+        <div class="flex items-center gap-2 p-3 bg-gray-50 border border-gray-200 rounded-lg hover:bg-white transition cursor-pointer group" onclick="copyBaseResult('oct')">
+          <span class="text-xs font-bold text-gray-400 w-24 shrink-0">八进制 (8)</span>
+          <code id="base-oct" class="flex-1 font-mono text-sm break-all text-gray-800">—</code>
+          <span class="text-xs text-blue-500 opacity-0 group-hover:opacity-100 transition">📋 复制</span>
+        </div>
+
+        <div class="flex items-center gap-2 p-3 bg-blue-50 border border-blue-200 rounded-lg hover:bg-white transition cursor-pointer group" onclick="copyBaseResult('dec')">
+          <span class="text-xs font-bold text-blue-500 w-24 shrink-0">十进制 (10)</span>
+          <code id="base-dec" class="flex-1 font-mono text-sm break-all text-gray-800">—</code>
+          <span class="text-xs text-blue-500 opacity-0 group-hover:opacity-100 transition">📋 复制</span>
+        </div>
+
+        <div class="flex items-center gap-2 p-3 bg-gray-50 border border-gray-200 rounded-lg hover:bg-white transition cursor-pointer group" onclick="copyBaseResult('hex')">
+          <span class="text-xs font-bold text-gray-400 w-24 shrink-0">十六进制 (16)</span>
+          <code id="base-hex" class="flex-1 font-mono text-sm break-all text-gray-800">—</code>
+          <span class="text-xs text-blue-500 opacity-0 group-hover:opacity-100 transition">📋 复制</span>
+        </div>
+      </div>
+
+      <!-- 额外信息 -->
+      <div class="mt-6 border-t border-gray-100 pt-4">
+        <details class="group">
+          <summary class="text-sm font-medium text-gray-700 cursor-pointer hover:text-blue-600">📋 更多信息</summary>
+          <div class="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2 text-sm" id="base-extras"></div>
+        </details>
+      </div>
+
+      <!-- 快速输入 -->
+      <div class="mt-6 border-t border-gray-100 pt-4">
+        <h3 class="text-sm font-medium text-gray-700 mb-2">⚡ 快速选择</h3>
+        <div class="flex flex-wrap gap-2">
+          <button onclick="quickExample('255', '10')" class="px-3 py-1.5 bg-gray-100 rounded-lg text-xs text-gray-600 hover:bg-gray-200">255</button>
+          <button onclick="quickExample('ff', '16')" class="px-3 py-1.5 bg-gray-100 rounded-lg text-xs text-gray-600 hover:bg-gray-200">0xFF</button>
+          <button onclick="quickExample('11111111', '2')" class="px-3 py-1.5 bg-gray-100 rounded-lg text-xs text-gray-600 hover:bg-gray-200">0b11111111</button>
+          <button onclick="quickExample('377', '8')" class="px-3 py-1.5 bg-gray-100 rounded-lg text-xs text-gray-600 hover:bg-gray-200">0o377</button>
+          <button onclick="quickExample('1024', '10')" class="px-3 py-1.5 bg-gray-100 rounded-lg text-xs text-gray-600 hover:bg-gray-200">1024</button>
+          <button onclick="quickExample('deadbeef', '16')" class="px-3 py-1.5 bg-gray-100 rounded-lg text-xs text-gray-600 hover:bg-gray-200">0xDEADBEEF</button>
+          <button onclick="quickExample('4294967295', '10')" class="px-3 py-1.5 bg-gray-100 rounded-lg text-xs text-gray-600 hover:bg-gray-200">2³²-1</button>
+          <button onclick="quickExample('abcd1234', '16')" class="px-3 py-1.5 bg-gray-100 rounded-lg text-xs text-gray-600 hover:bg-gray-200">0xABCD1234</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+function convertFromInput() {
+  const input = document.getElementById('base-input').value.trim();
+  const from = parseInt(document.getElementById('base-from').value);
+
+  const binEl = document.getElementById('base-bin');
+  const octEl = document.getElementById('base-oct');
+  const decEl = document.getElementById('base-dec');
+  const hexEl = document.getElementById('base-hex');
+
+  if (!input) {
+    binEl.textContent = octEl.textContent = decEl.textContent = hexEl.textContent = '—';
+    document.getElementById('base-extras').innerHTML = '';
+    return;
+  }
+
+  try {
+    let value;
+    // 尝试解析输入
+    if (from === 10) {
+      value = BigInt(input);
+    } else if (from === 16) {
+      const clean = input.replace(/^0x/i, '').trim();
+      if (!/^[0-9a-fA-F]+$/.test(clean)) throw new Error('invalid hex');
+      value = BigInt('0x' + clean);
+    } else if (from === 2) {
+      const clean = input.replace(/^0b/i, '').trim();
+      if (!/^[01]+$/.test(clean)) throw new Error('invalid binary');
+      value = BigInt('0b' + clean);
+    } else if (from === 8) {
+      const clean = input.replace(/^0o/i, '').trim();
+      if (!/^[0-7]+$/.test(clean)) throw new Error('invalid octal');
+      value = BigInt('0o' + clean);
+    } else {
+      throw new Error('unsupported base');
+    }
+
+    const isNegative = value < 0n;
+    const absValue = isNegative ? -value : value;
+
+    binEl.textContent = (isNegative ? '-' : '') + absValue.toString(2);
+    octEl.textContent = (isNegative ? '-' : '') + absValue.toString(8);
+    decEl.textContent = (isNegative ? '-' : '') + absValue.toString(10);
+    hexEl.textContent = (isNegative ? '-' : '') + absValue.toString(16).toUpperCase();
+    if (from === 16) {
+      hexEl.textContent = (isNegative ? '-' : '') + absValue.toString(16).toLowerCase();
+    }
+
+    // 额外信息
+    const extras = document.getElementById('base-extras');
+    const decStr = absValue.toString(10);
+    extras.innerHTML = '' +
+      '<div class="flex justify-between p-2 bg-gray-50 rounded"><span class="text-gray-500">位数 (二进制)</span><span class="font-mono">' + absValue.toString(2).length + ' bit</span></div>' +
+      '<div class="flex justify-between p-2 bg-gray-50 rounded"><span class="text-gray-500">位数 (十进制)</span><span class="font-mono">' + decStr.length + ' 位</span></div>' +
+      '<div class="flex justify-between p-2 bg-gray-50 rounded"><span class="text-gray-500">字节数</span><span class="font-mono">' + Math.ceil(absValue.toString(2).length / 8) + ' 字节</span></div>' +
+      '<div class="flex justify-between p-2 bg-gray-50 rounded"><span class="text-gray-500">字符 (ASCII)</span><span class="font-mono">' + (absValue >= 32n && absValue <= 126n ? String.fromCharCode(Number(absValue)) : '—') + '</span></div>';
+
+  } catch (e) {
+    binEl.textContent = octEl.textContent = decEl.textContent = hexEl.textContent = '❌ 格式错误';
+    document.getElementById('base-extras').innerHTML = '';
+  }
+}
+
+function copyBaseResult(type) {
+  const el = document.getElementById('base-' + type);
+  if (!el || !el.textContent || el.textContent === '—' || el.textContent.startsWith('❌')) return;
+  navigator.clipboard.writeText(el.textContent).then(() => {
+    // 找该行中的复制按钮
+    const parent = el.closest('.flex');
+    if (parent) {
+      const btn = parent.querySelector('.opacity-0');
+      if (btn) {
+        btn.textContent = '✅ 已复制';
+        btn.classList.remove('opacity-0');
+        btn.classList.add('opacity-100');
+        setTimeout(() => {
+          btn.textContent = '📋 复制';
+          btn.classList.remove('opacity-100');
+          btn.classList.add('opacity-0');
+        }, 1500);
+      }
+    }
+  });
+}
+
+function quickExample(value, base) {
+  document.getElementById('base-input').value = value;
+  document.getElementById('base-from').value = base;
+  convertFromInput();
+}
+</script>

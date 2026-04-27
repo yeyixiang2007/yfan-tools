@@ -1,0 +1,189 @@
+<%- /* content block for layout */ '' %>
+<% var content = ''; %>
+
+<div>
+  <div class="mb-6">
+    <a href="/" class="text-sm text-blue-500 hover:text-blue-700">&larr; 返回首页</a>
+  </div>
+
+  <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 md:p-8">
+    <div class="flex items-center gap-3 mb-4">
+      <span class="text-3xl"><%- tool.icon %></span>
+      <div>
+        <h1 class="text-2xl font-bold text-gray-800"><%- tool.name %></h1>
+        <p class="text-sm text-gray-500"><%- tool.desc %></p>
+      </div>
+    </div>
+
+    <div class="border-t border-gray-100 pt-6 mt-2">
+      <div class="mb-4">
+        <label class="block text-sm font-medium text-gray-700 mb-1">输入文本</label>
+        <textarea id="counter-input" rows="10" class="w-full border border-gray-300 rounded-lg p-3 font-mono text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="粘贴要统计的文本..." oninput="updateStats()"></textarea>
+      </div>
+
+      <!-- 实时统计卡片 -->
+      <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mb-6">
+        <div class="bg-blue-50 border border-blue-100 rounded-lg p-4 text-center">
+          <div class="text-2xl font-bold text-blue-700" id="stat-chars">0</div>
+          <div class="text-xs text-blue-500 mt-1">总字符</div>
+        </div>
+        <div class="bg-indigo-50 border border-indigo-100 rounded-lg p-4 text-center">
+          <div class="text-2xl font-bold text-indigo-700" id="stat-chars-no-space">0</div>
+          <div class="text-xs text-indigo-500 mt-1">字符（无空格）</div>
+        </div>
+        <div class="bg-green-50 border border-green-100 rounded-lg p-4 text-center">
+          <div class="text-2xl font-bold text-green-700" id="stat-words">0</div>
+          <div class="text-xs text-green-500 mt-1">单词数</div>
+        </div>
+        <div class="bg-purple-50 border border-purple-100 rounded-lg p-4 text-center">
+          <div class="text-2xl font-bold text-purple-700" id="stat-lines">0</div>
+          <div class="text-xs text-purple-500 mt-1">行数</div>
+        </div>
+        <div class="bg-orange-50 border border-orange-100 rounded-lg p-4 text-center">
+          <div class="text-2xl font-bold text-orange-700" id="stat-cjk">0</div>
+          <div class="text-xs text-orange-500 mt-1">中文字数</div>
+        </div>
+        <div class="bg-pink-50 border border-pink-100 rounded-lg p-4 text-center">
+          <div class="text-2xl font-bold text-pink-700" id="stat-sentences">0</div>
+          <div class="text-xs text-pink-500 mt-1">句子数</div>
+        </div>
+      </div>
+
+      <!-- 详细统计 -->
+      <div class="border-t border-gray-100 pt-4">
+        <details class="group">
+          <summary class="text-sm font-medium text-gray-700 cursor-pointer hover:text-blue-600">📊 详细统计</summary>
+          <div class="mt-3 grid grid-cols-2 sm:grid-cols-3 gap-2 text-sm">
+            <div class="flex justify-between p-2 bg-gray-50 rounded">
+              <span class="text-gray-500">数字</span>
+              <span class="font-mono" id="stat-digits">0</span>
+            </div>
+            <div class="flex justify-between p-2 bg-gray-50 rounded">
+              <span class="text-gray-500">字母</span>
+              <span class="font-mono" id="stat-letters">0</span>
+            </div>
+            <div class="flex justify-between p-2 bg-gray-50 rounded">
+              <span class="text-gray-500">空格</span>
+              <span class="font-mono" id="stat-spaces">0</span>
+            </div>
+            <div class="flex justify-between p-2 bg-gray-50 rounded">
+              <span class="text-gray-500">标点</span>
+              <span class="font-mono" id="stat-punctuation">0</span>
+            </div>
+            <div class="flex justify-between p-2 bg-gray-50 rounded">
+              <span class="text-gray-500">大写字母</span>
+              <span class="font-mono" id="stat-uppercase">0</span>
+            </div>
+            <div class="flex justify-between p-2 bg-gray-50 rounded">
+              <span class="text-gray-500">小写字母</span>
+              <span class="font-mono" id="stat-lowercase">0</span>
+            </div>
+          </div>
+        </details>
+      </div>
+
+      <!-- 常用汉字/词频 -->
+      <div class="mt-4 border-t border-gray-100 pt-4">
+        <details class="group">
+          <summary class="text-sm font-medium text-gray-700 cursor-pointer hover:text-blue-600">🔤 字符频率 Top 20</summary>
+          <div id="char-freq" class="mt-3 text-sm text-gray-400">输入文本后自动显示</div>
+        </details>
+      </div>
+
+      <div class="mt-4 flex gap-2">
+        <button onclick="clearCounter()" class="px-4 py-2 bg-white border border-gray-300 text-gray-500 rounded-lg hover:bg-gray-50 text-sm">清空</button>
+        <button onclick="sampleText()" class="px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 text-sm">示例文本</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+function updateStats() {
+  const input = document.getElementById('counter-input').value;
+
+  // 基本统计
+  const chars = input.length;
+  const charsNoSpace = input.replace(/\s/g, '').length;
+  const lines = input ? input.split('\n').length : 0;
+  const words = input.trim() ? input.trim().split(/\s+/).length : 0;
+
+  // 中文字数
+  const cjk = (input.match(/[\u4e00-\u9fff\u3400-\u4dbf\uf900-\ufaff]/g) || []).length;
+
+  // 句子数（以句号、问号、感叹号、省略号结尾）
+  const sentences = (input.match(/[。！？．!?…]+/g) || []).length;
+
+  document.getElementById('stat-chars').textContent = chars.toLocaleString();
+  document.getElementById('stat-chars-no-space').textContent = charsNoSpace.toLocaleString();
+  document.getElementById('stat-words').textContent = words.toLocaleString();
+  document.getElementById('stat-lines').textContent = lines.toLocaleString();
+  document.getElementById('stat-cjk').textContent = cjk.toLocaleString();
+  document.getElementById('stat-sentences').textContent = sentences.toLocaleString();
+
+  // 详细统计
+  const digits = (input.match(/\d/g) || []).length;
+  const letters = (input.match(/[a-zA-Z]/g) || []).length;
+  const spaces = (input.match(/\s/g) || []).length;
+  const punctuation = (input.match(/[^\w\s\u4e00-\u9fff\u3400-\u4dbf\uf900-\ufaff]/g) || []).length;
+  const uppercase = (input.match(/[A-Z]/g) || []).length;
+  const lowercase = (input.match(/[a-z]/g) || []).length;
+
+  document.getElementById('stat-digits').textContent = digits.toLocaleString();
+  document.getElementById('stat-letters').textContent = letters.toLocaleString();
+  document.getElementById('stat-spaces').textContent = spaces.toLocaleString();
+  document.getElementById('stat-punctuation').textContent = punctuation.toLocaleString();
+  document.getElementById('stat-uppercase').textContent = uppercase.toLocaleString();
+  document.getElementById('stat-lowercase').textContent = lowercase.toLocaleString();
+
+  // 字符频率
+  const freqEl = document.getElementById('char-freq');
+  if (charsNoSpace === 0) {
+    freqEl.textContent = '输入文本后自动显示';
+    return;
+  }
+
+  const freq = {};
+  for (const ch of input) {
+    if (/\s/.test(ch)) continue;
+    freq[ch] = (freq[ch] || 0) + 1;
+  }
+
+  const sorted = Object.entries(freq)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 20);
+
+  freqEl.innerHTML = '<div class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-5 gap-1">' +
+    sorted.map(([ch, count], i) =>
+      '<div class="flex items-center gap-1 px-2 py-1 bg-gray-50 rounded text-xs">' +
+      '<span class="text-gray-400 w-4">' + (i + 1) + '</span>' +
+      '<span class="text-lg">' + escapeHtml(ch) + '</span>' +
+      '<span class="text-gray-500 ml-auto">' + count + '</span>' +
+      '</div>'
+    ).join('') +
+    '</div>';
+}
+
+function clearCounter() {
+  document.getElementById('counter-input').value = '';
+  updateStats();
+}
+
+function sampleText() {
+  document.getElementById('counter-input').value =
+    'The quick brown fox jumps over the lazy dog. 敏捷的棕色狐狸跳过了懒惰的狗。\n\n' +
+    'Hello, World! 你好，世界！\n' +
+    '这是一段测试文本，包含了中英文混排、标点符号、12345数字等内容。\n' +
+    'Testing with Numbers: 2024, 3.14159, 0xFF.\n' +
+    '用户@example.com 发送了邮件到 support@yfan.space。URL: https://yfan.space/tools\n' +
+    'Let\'s count characters, words, and lines!\n' +
+    '系统通知: 你收到了 42 条消息，其中 12 条未读。';
+  updateStats();
+}
+
+function escapeHtml(str) {
+  return String(str).replace(/[&<>"']/g, function(m) {
+    return {'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[m];
+  });
+}
+</script>

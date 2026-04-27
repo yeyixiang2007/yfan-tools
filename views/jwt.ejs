@@ -1,0 +1,145 @@
+<%- /* content block for layout */ '' %>
+<% var content = ''; %>
+
+<div>
+  <div class="mb-6">
+    <a href="/" class="text-sm text-blue-500 hover:text-blue-700">&larr; 返回首页</a>
+  </div>
+
+  <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 md:p-8">
+    <div class="flex items-center gap-3 mb-4">
+      <span class="text-3xl"><%- tool.icon %></span>
+      <div>
+        <h1 class="text-2xl font-bold text-gray-800"><%- tool.name %></h1>
+        <p class="text-sm text-gray-500"><%- tool.desc %></p>
+      </div>
+    </div>
+
+    <div class="border-t border-gray-100 pt-6 mt-2">
+      <div class="mb-4">
+        <label class="block text-sm font-medium text-gray-700 mb-1">JWT Token</label>
+        <textarea id="jwt-input" rows="4" class="w-full border border-gray-300 rounded-lg p-3 font-mono text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="粘贴 JWT Token..."></textarea>
+      </div>
+
+      <div class="flex flex-wrap gap-2 mb-6">
+        <button onclick="decodeJWT()" class="px-5 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium">🔓 解码</button>
+        <button onclick="clearJWT()" class="px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 text-sm font-medium">清空</button>
+      </div>
+
+      <!-- 错误提示 -->
+      <div id="jwt-error" class="hidden mb-4 p-3 bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg"></div>
+
+      <!-- Header -->
+      <div id="jwt-header-section" class="hidden mb-4">
+        <div class="flex items-center justify-between mb-1">
+          <label class="block text-sm font-medium text-gray-700">Header</label>
+          <span class="text-xs text-gray-400" id="jwt-alg"></span>
+        </div>
+        <pre id="jwt-header" class="w-full border border-gray-300 rounded-lg p-3 font-mono text-sm bg-gray-50 overflow-auto whitespace-pre-wrap min-h-[80px]"></pre>
+      </div>
+
+      <!-- Payload -->
+      <div id="jwt-payload-section" class="hidden mb-4">
+        <div class="flex items-center justify-between mb-1">
+          <label class="block text-sm font-medium text-gray-700">Payload</label>
+          <div class="flex gap-2 text-xs">
+            <span id="jwt-exp" class="text-gray-400"></span>
+            <span id="jwt-iat" class="text-gray-400"></span>
+          </div>
+        </div>
+        <pre id="jwt-payload" class="w-full border border-gray-300 rounded-lg p-3 font-mono text-sm bg-gray-50 overflow-auto whitespace-pre-wrap min-h-[120px]"></pre>
+      </div>
+
+      <!-- Signature -->
+      <div id="jwt-sig-section" class="hidden">
+        <label class="block text-sm font-medium text-gray-700 mb-1">Signature</label>
+        <div class="flex items-center gap-2">
+          <code id="jwt-signature" class="flex-1 p-3 border border-gray-300 rounded-lg font-mono text-sm bg-gray-50 break-all"></code>
+          <span id="jwt-validity" class="px-2 py-1 text-xs font-medium rounded whitespace-nowrap"></span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+function decodeJWT() {
+  const input = document.getElementById('jwt-input').value.trim();
+  const errEl = document.getElementById('jwt-error');
+
+  // Reset
+  errEl.classList.add('hidden');
+  ['jwt-header-section', 'jwt-payload-section', 'jwt-sig-section'].forEach(id => {
+    document.getElementById(id).classList.add('hidden');
+  });
+
+  if (!input) {
+    errEl.textContent = '⚠️ 请输入 JWT Token';
+    errEl.classList.remove('hidden');
+    return;
+  }
+
+  const parts = input.split('.');
+  if (parts.length !== 3) {
+    errEl.textContent = '❌ 无效的 JWT 格式。JWT 应包含三部分（header.payload.signature），以点号分隔。';
+    errEl.classList.remove('hidden');
+    return;
+  }
+
+  try {
+    // Decode header
+    const header = JSON.parse(atob(parts[0]));
+    document.getElementById('jwt-header').textContent = JSON.stringify(header, null, 2);
+    document.getElementById('jwt-alg').textContent = '算法: ' + (header.alg || '未知') + (header.typ ? ' | 类型: ' + header.typ : '');
+    document.getElementById('jwt-header-section').classList.remove('hidden');
+
+    // Decode payload
+    const payload = JSON.parse(atob(parts[1]));
+    document.getElementById('jwt-payload').textContent = JSON.stringify(payload, null, 2);
+    document.getElementById('jwt-payload-section').classList.remove('hidden');
+
+    // 时间信息
+    const expInfo = document.getElementById('jwt-exp');
+    if (payload.exp) {
+      const d = new Date(payload.exp * 1000);
+      expInfo.textContent = '过期: ' + d.toLocaleString('zh-CN');
+      expInfo.className = (d < new Date()) ? 'text-red-500' : 'text-green-600';
+    }
+    const iatInfo = document.getElementById('jwt-iat');
+    if (payload.iat) {
+      const d = new Date(payload.iat * 1000);
+      iatInfo.textContent = '签发: ' + d.toLocaleString('zh-CN');
+      iatInfo.className = 'text-gray-400';
+    }
+
+    // Signature
+    document.getElementById('jwt-signature').textContent = parts[2];
+    const validity = document.getElementById('jwt-validity');
+    if (header.alg && header.alg === 'none') {
+      validity.textContent = '⚠️ 无签名';
+      validity.className = 'px-2 py-1 text-xs font-medium rounded whitespace-nowrap bg-yellow-100 text-yellow-700';
+    } else {
+      validity.textContent = '✅ 有签名（不验证）';
+      validity.className = 'px-2 py-1 text-xs font-medium rounded whitespace-nowrap bg-green-100 text-green-700';
+    }
+    document.getElementById('jwt-sig-section').classList.remove('hidden');
+
+  } catch (e) {
+    errEl.textContent = '❌ Base64 解析失败: ' + e.message + '。请确认是有效的 JWT Token。';
+    errEl.classList.remove('hidden');
+  }
+}
+
+function clearJWT() {
+  document.getElementById('jwt-input').value = '';
+  document.getElementById('jwt-error').classList.add('hidden');
+  ['jwt-header-section', 'jwt-payload-section', 'jwt-sig-section'].forEach(id => {
+    document.getElementById(id).classList.add('hidden');
+  });
+}
+
+// 自动检测粘贴的 JWT
+document.getElementById('jwt-input').addEventListener('paste', function() {
+  setTimeout(decodeJWT, 50);
+});
+</script>

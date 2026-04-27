@@ -1,0 +1,126 @@
+<%- /* index.ejs — content block only, layout.ejs wraps it */ '' %>
+<div>
+  <div class="text-center mb-8">
+    <h1 class="text-3xl font-bold text-gray-800 mb-2">小工具集合</h1>
+    <p class="text-gray-500">开发者常用的小工具，即开即用，数据不上传服务器</p>
+  </div>
+
+  <!-- 分类导航 -->
+  <div class="flex flex-wrap gap-2 mb-8 justify-center" id="category-nav">
+    <% categories.forEach(function(c) { %>
+      <% var isActive = c.id === 'all' ? true : false; %>
+      <button data-category="<%- c.id %>"
+              class="category-btn cursor-pointer px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200
+                     <%= isActive ? 'bg-blue-600 text-white shadow-sm' : 'bg-white text-gray-600 hover:bg-gray-100 border border-gray-200' %>"
+              onclick="filterByCategory('<%- c.id %>')">
+        <span><%- c.icon %></span>
+        <span><%- c.name %></span>
+        <% if (c.id !== 'all') { %>
+          <span class="ml-1 text-xs opacity-60">(<%= tools.filter(t => t.category === c.id).length %>)</span>
+        <% } else { %>
+          <span class="ml-1 text-xs opacity-60">(<%= tools.length %>)</span>
+        <% } %>
+      </button>
+    <% }) %>
+  </div>
+
+  <!-- 分类描述 -->
+  <div id="category-desc" class="text-center text-sm text-gray-400 mb-6 h-5">
+    点击分类标签快速筛选
+  </div>
+
+  <!-- 所有工具网格 -->
+  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5" id="tool-grid">
+    <% tools.forEach(function(t) { %>
+      <a href="/<%- t.id %>"
+         data-category="<%- t.category %>"
+         class="tool-card block bg-white rounded-xl shadow-sm border border-gray-100 p-6
+                hover:shadow-md hover:border-blue-200 hover:-translate-y-0.5
+                transition-all duration-200 group">
+        <div class="text-3xl mb-3"><%- t.icon %></div>
+        <h2 class="text-lg font-semibold text-gray-800 group-hover:text-blue-600 transition">
+          <%- t.name %>
+        </h2>
+        <p class="text-sm text-gray-500 mt-1"><%- t.desc %></p>
+        <div class="flex items-center justify-between mt-3">
+          <span class="text-xs text-gray-300"><%- categories.find(function(c) { return c.id === t.category }).name %></span>
+          <span class="text-blue-500 text-sm font-medium opacity-0 group-hover:opacity-100 transition">
+            开始使用 →
+          </span>
+        </div>
+      </a>
+    <% }) %>
+  </div>
+
+  <!-- 空状态 -->
+  <div id="no-results" class="hidden text-center py-16 text-gray-400">
+    <div class="text-5xl mb-4">🔍</div>
+    <p>该分类下还没有工具</p>
+  </div>
+</div>
+
+<script>
+// 获取所有分类按钮和卡片
+var categories = [<% categories.forEach(function(c, i) { %>
+  '<%- c.id %>'<%= i < categories.length - 1 ? ',' : '' %>
+<% }) %>];
+
+function filterByCategory(categoryId) {
+  var cards = document.querySelectorAll('.tool-card');
+  var noResults = document.getElementById('no-results');
+  var btns = document.querySelectorAll('.category-btn');
+  var desc = document.getElementById('category-desc');
+  var visibleCount = 0;
+
+  // 更新按钮状态
+  btns.forEach(function(btn) {
+    if (btn.dataset.category === categoryId) {
+      btn.className = 'category-btn cursor-pointer px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 bg-blue-600 text-white shadow-sm';
+    } else {
+      btn.className = 'category-btn cursor-pointer px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 bg-white text-gray-600 hover:bg-gray-100 border border-gray-200';
+    }
+  });
+
+  // 显示/隐藏卡片
+  cards.forEach(function(card) {
+    if (categoryId === 'all' || card.dataset.category === categoryId) {
+      card.classList.remove('hidden');
+      visibleCount++;
+    } else {
+      card.classList.add('hidden');
+    }
+  });
+
+  // 更新描述
+  if (categoryId === 'all') {
+    desc.textContent = '全部 ' + cards.length + ' 个工具';
+  } else {
+    var catName = '';
+    btns.forEach(function(btn) {
+      if (btn.dataset.category === categoryId) {
+        catName = btn.textContent.trim();
+      }
+    });
+    desc.textContent = catName + ' — ' + visibleCount + ' 个工具';
+  }
+
+  // 空状态
+  if (visibleCount === 0) {
+    noResults.classList.remove('hidden');
+  } else {
+    noResults.classList.add('hidden');
+  }
+}
+
+// 搜索功能（键盘快速定位）
+document.addEventListener('keydown', function(e) {
+  // Ctrl/Cmd + 数字 切换分类
+  if ((e.ctrlKey || e.metaKey) && e.key >= '1' && e.key <= '7') {
+    e.preventDefault();
+    var idx = parseInt(e.key) - 1;
+    if (idx < categories.length) {
+      filterByCategory(categories[idx]);
+    }
+  }
+});
+</script>

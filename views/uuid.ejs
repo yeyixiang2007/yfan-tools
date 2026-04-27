@@ -1,0 +1,106 @@
+<%- /* content block for layout */ '' %>
+<% var content = ''; %>
+
+<div>
+  <div class="mb-6">
+    <a href="/" class="text-sm text-blue-500 hover:text-blue-700">&larr; 返回首页</a>
+  </div>
+
+  <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 md:p-8">
+    <div class="flex items-center gap-3 mb-4">
+      <span class="text-3xl"><%- tool.icon %></span>
+      <div>
+        <h1 class="text-2xl font-bold text-gray-800"><%- tool.name %></h1>
+        <p class="text-sm text-gray-500"><%- tool.desc %></p>
+      </div>
+    </div>
+
+    <div class="border-t border-gray-100 pt-6 mt-2">
+      <!-- Options -->
+      <div class="flex flex-wrap gap-4 mb-6">
+        <div>
+          <label class="block text-xs text-gray-500 mb-1">版本</label>
+          <div class="flex gap-2">
+            <label class="flex items-center gap-1 text-sm"><input type="radio" name="uuid-version" value="v4" checked onchange="generateUUIDs()"> v4</label>
+            <label class="flex items-center gap-1 text-sm"><input type="radio" name="uuid-version" value="v7" onchange="generateUUIDs()"> v7</label>
+          </div>
+        </div>
+        <div>
+          <label class="block text-xs text-gray-500 mb-1">生成数量</label>
+          <div class="flex items-center gap-2">
+            <input id="uuid-count" type="number" min="1" max="100" value="5" onchange="generateUUIDs()" class="w-20 border border-gray-300 rounded-lg p-2 text-sm text-center">
+            <span class="text-xs text-gray-400">(1-100)</span>
+          </div>
+        </div>
+        <div class="flex items-end">
+          <button onclick="generateUUIDs()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium">生成</button>
+          <button onclick="copyAllUUIDs()" class="ml-2 px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 text-sm font-medium">复制全部</button>
+        </div>
+      </div>
+
+      <!-- Output -->
+      <div>
+        <div class="flex items-center justify-between mb-1">
+          <label class="block text-sm font-medium text-gray-700">生成的 UUID</label>
+          <span id="uuid-count-display" class="text-xs text-gray-400">0 个</span>
+        </div>
+        <pre id="uuid-output" class="w-full min-h-[200px] border border-gray-300 rounded-lg p-3 font-mono text-sm bg-gray-50 overflow-auto whitespace-pre"></pre>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+function generateUUIDv4() {
+  return crypto.randomUUID();
+}
+
+function generateUUIDv7() {
+  const now = Date.now();
+  const bytes = new Uint8Array(16);
+  // 时间戳前 48 位
+  const tsHi = Math.floor(now / 0x100000000);
+  const tsLo = (now & 0xFFFFFFFF) >>> 0;
+  bytes[0] = (tsHi >>> 24) & 0xFF;
+  bytes[1] = (tsHi >>> 16) & 0xFF;
+  bytes[2] = (tsHi >>> 8) & 0xFF;
+  bytes[3] = tsHi & 0xFF;
+  bytes[4] = (tsLo >>> 24) & 0xFF;
+  bytes[5] = (tsLo >>> 16) & 0xFF;
+  // 随机 bits
+  crypto.getRandomValues(bytes.subarray(6));
+  // 版本 7
+  bytes[6] = (bytes[6] & 0x0F) | 0x70;
+  // 变体 10xx
+  bytes[8] = (bytes[8] & 0x3F) | 0x80;
+  // 格式化为 UUID 字符串
+  const hex = Array.from(bytes, b => b.toString(16).padStart(2, '0')).join('');
+  return `${hex.slice(0,8)}-${hex.slice(8,12)}-${hex.slice(12,16)}-${hex.slice(16,20)}-${hex.slice(20,32)}`;
+}
+
+function generateUUIDs() {
+  const version = document.querySelector('input[name="uuid-version"]:checked').value;
+  const count = Math.min(Math.max(parseInt(document.getElementById('uuid-count').value) || 1, 1), 100);
+  const fn = version === 'v4' ? generateUUIDv4 : generateUUIDv7;
+  const uuids = [];
+  for (let i = 0; i < count; i++) {
+    uuids.push(fn());
+  }
+  document.getElementById('uuid-output').textContent = uuids.join('\n');
+  document.getElementById('uuid-count-display').textContent = count + ' 个';
+}
+
+function copyAllUUIDs() {
+  const text = document.getElementById('uuid-output').textContent;
+  if (!text) return;
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = event.target;
+    const orig = btn.textContent;
+    btn.textContent = '✅ 已复制 ' + text.split('\n').length + ' 个';
+    setTimeout(() => btn.textContent = orig, 2000);
+  });
+}
+
+// 自动生成初始
+generateUUIDs();
+</script>

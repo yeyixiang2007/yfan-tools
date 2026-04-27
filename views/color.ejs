@@ -1,0 +1,151 @@
+<%- /* content block for layout */ '' %>
+<% var content = ''; %>
+
+<div>
+  <div class="mb-6">
+    <a href="/" class="text-sm text-blue-500 hover:text-blue-700">&larr; 返回首页</a>
+  </div>
+
+  <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 md:p-8">
+    <div class="flex items-center gap-3 mb-4">
+      <span class="text-3xl"><%- tool.icon %></span>
+      <div>
+        <h1 class="text-2xl font-bold text-gray-800"><%- tool.name %></h1>
+        <p class="text-sm text-gray-500"><%- tool.desc %></p>
+      </div>
+    </div>
+
+    <div class="border-t border-gray-100 pt-6 mt-2">
+      <!-- Color Picker -->
+      <div class="flex flex-col md:flex-row gap-6 mb-8">
+        <div class="flex-shrink-0">
+          <label class="block text-xs text-gray-500 mb-1">取色器</label>
+          <input id="color-picker" type="color" value="#3b82f6" onchange="colorPickerChanged()" class="w-24 h-24 border border-gray-300 rounded-lg cursor-pointer">
+        </div>
+        <div class="flex-1 grid grid-cols-1 gap-4">
+          <div>
+            <label class="block text-xs text-gray-500 mb-1">HEX</label>
+            <input id="color-hex" value="#3b82f6" oninput="hexChanged()" class="w-full border border-gray-300 rounded-lg p-2 text-sm font-mono">
+          </div>
+          <div>
+            <label class="block text-xs text-gray-500 mb-1">RGB</label>
+            <input id="color-rgb" value="rgb(59, 130, 246)" oninput="rgbChanged()" class="w-full border border-gray-300 rounded-lg p-2 text-sm font-mono">
+          </div>
+          <div>
+            <label class="block text-xs text-gray-500 mb-1">HSL</label>
+            <input id="color-hsl" value="hsl(217, 91%, 60%)" oninput="hslChanged()" class="w-full border border-gray-300 rounded-lg p-2 text-sm font-mono">
+          </div>
+        </div>
+      </div>
+
+      <!-- Preview -->
+      <div class="mb-6">
+        <div id="color-preview" class="w-full h-20 rounded-lg border border-gray-200" style="background-color: #3b82f6;"></div>
+      </div>
+
+      <!-- Preset palette -->
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-2">预置色板</label>
+        <div class="flex flex-wrap gap-2">
+          <button onclick="setColor('#e74c3c')" class="w-8 h-8 rounded-lg border border-gray-200 hover:scale-110 transition" style="background:#e74c3c" title="红色"></button>
+          <button onclick="setColor('#e67e22')" class="w-8 h-8 rounded-lg border border-gray-200 hover:scale-110 transition" style="background:#e67e22" title="橙色"></button>
+          <button onclick="setColor('#f1c40f')" class="w-8 h-8 rounded-lg border border-gray-200 hover:scale-110 transition" style="background:#f1c40f" title="黄色"></button>
+          <button onclick="setColor('#2ecc71')" class="w-8 h-8 rounded-lg border border-gray-200 hover:scale-110 transition" style="background:#2ecc71" title="绿色"></button>
+          <button onclick="setColor('#1abc9c')" class="w-8 h-8 rounded-lg border border-gray-200 hover:scale-110 transition" style="background:#1abc9c" title="青色"></button>
+          <button onclick="setColor('#3498db')" class="w-8 h-8 rounded-lg border border-gray-200 hover:scale-110 transition" style="background:#3498db" title="蓝色"></button>
+          <button onclick="setColor('#9b59b6')" class="w-8 h-8 rounded-lg border border-gray-200 hover:scale-110 transition" style="background:#9b59b6" title="紫色"></button>
+          <button onclick="setColor('#e91e63')" class="w-8 h-8 rounded-lg border border-gray-200 hover:scale-110 transition" style="background:#e91e63" title="粉色"></button>
+          <button onclick="setColor('#34495e')" class="w-8 h-8 rounded-lg border border-gray-200 hover:scale-110 transition" style="background:#34495e" title="深蓝"></button>
+          <button onclick="setColor('#95a5a6')" class="w-8 h-8 rounded-lg border border-gray-200 hover:scale-110 transition" style="background:#95a5a6" title="灰色"></button>
+          <button onclick="setColor('#000000')" class="w-8 h-8 rounded-lg border border-gray-200 hover:scale-110 transition" style="background:#000000" title="黑色"></button>
+          <button onclick="setColor('#ffffff')" class="w-8 h-8 rounded-lg border border-gray-300 hover:scale-110 transition" style="background:#ffffff" title="白色"></button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+function hexToRgb(hex) {
+  const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+  return result ? {
+    r: parseInt(result[1], 16),
+    g: parseInt(result[2], 16),
+    b: parseInt(result[3], 16)
+  } : null;
+}
+
+function rgbToHsl(r, g, b) {
+  r /= 255; g /= 255; b /= 255;
+  const max = Math.max(r, g, b), min = Math.min(r, g, b);
+  let h, s, l = (max + min) / 2;
+  if (max === min) { h = s = 0; }
+  else {
+    const d = max - min;
+    s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+    switch (max) {
+      case r: h = ((g - b) / d + (g < b ? 6 : 0)) / 6; break;
+      case g: h = ((b - r) / d + 2) / 6; break;
+      case b: h = ((r - g) / d + 4) / 6; break;
+    }
+  }
+  return { h: Math.round(h * 360), s: Math.round(s * 100), l: Math.round(l * 100) };
+}
+
+function hslToRgb(h, s, l) {
+  s /= 100; l /= 100;
+  const a = s * Math.min(l, 1 - l);
+  const f = (n, k = (n + h / 30) % 12) => l - a * Math.max(-1, Math.min(k - 3, 9 - k, 1));
+  return { r: Math.round(f(0) * 255), g: Math.round(f(8) * 255), b: Math.round(f(4) * 255) };
+}
+
+function updateAllFromHex(hex) {
+  const rgb = hexToRgb(hex);
+  if (!rgb) return;
+  const hsl = rgbToHsl(rgb.r, rgb.g, rgb.b);
+  document.getElementById('color-hex').value = hex;
+  document.getElementById('color-rgb').value = `rgb(${rgb.r}, ${rgb.g}, ${rgb.b})`;
+  document.getElementById('color-hsl').value = `hsl(${hsl.h}, ${hsl.s}%, ${hsl.l}%)`;
+  document.getElementById('color-preview').style.backgroundColor = hex;
+  document.getElementById('color-picker').value = hex;
+}
+
+function colorPickerChanged() {
+  updateAllFromHex(document.getElementById('color-picker').value);
+}
+
+function hexChanged() {
+  let val = document.getElementById('color-hex').value.trim();
+  if (!val.startsWith('#')) val = '#' + val;
+  if (/^#[0-9a-f]{6}$/i.test(val)) {
+    updateAllFromHex(val);
+  }
+}
+
+function rgbChanged() {
+  const val = document.getElementById('color-rgb').value.trim();
+  const match = val.match(/rgb\s*\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*\)/i);
+  if (match) {
+    const r = Math.min(255, Math.max(0, parseInt(match[1])));
+    const g = Math.min(255, Math.max(0, parseInt(match[2])));
+    const b = Math.min(255, Math.max(0, parseInt(match[3])));
+    const hex = '#' + [r,g,b].map(x => x.toString(16).padStart(2,'0')).join('');
+    updateAllFromHex(hex);
+  }
+}
+
+function hslChanged() {
+  const val = document.getElementById('color-hsl').value.trim();
+  const match = val.match(/hsl\s*\(\s*(\d+)\s*,\s*(\d+)%\s*,\s*(\d+)%\s*\)/i);
+  if (match) {
+    const h = parseInt(match[1]), s = parseInt(match[2]), l = parseInt(match[3]);
+    const rgb = hslToRgb(h, s, l);
+    const hex = '#' + [rgb.r, rgb.g, rgb.b].map(x => x.toString(16).padStart(2,'0')).join('');
+    updateAllFromHex(hex);
+  }
+}
+
+function setColor(hex) {
+  updateAllFromHex(hex);
+}
+</script>

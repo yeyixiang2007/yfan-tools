@@ -1,0 +1,139 @@
+<%- /* content block for layout */ '' %>
+<% var content = ''; %>
+
+<div>
+  <div class="mb-6">
+    <a href="/" class="text-sm text-blue-500 hover:text-blue-700">&larr; 返回首页</a>
+  </div>
+
+  <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 md:p-8">
+    <div class="flex items-center gap-3 mb-4">
+      <span class="text-3xl"><%- tool.icon %></span>
+      <div>
+        <h1 class="text-2xl font-bold text-gray-800"><%- tool.name %></h1>
+        <p class="text-sm text-gray-500"><%- tool.desc %></p>
+      </div>
+    </div>
+
+    <div class="border-t border-gray-100 pt-6 mt-2">
+      <!-- Current time -->
+      <div class="bg-gray-50 rounded-lg p-4 mb-6 text-center">
+        <p class="text-xs text-gray-500 mb-1">当前时间</p>
+        <p id="current-time" class="text-3xl font-mono font-bold text-gray-800"></p>
+      </div>
+
+      <!-- Convert: Timestamp to Date -->
+      <div class="mb-6">
+        <h3 class="text-sm font-semibold text-gray-700 mb-3">时间戳 → 日期时间</h3>
+        <div class="flex flex-wrap gap-3 items-end">
+          <div>
+            <label class="block text-xs text-gray-500 mb-1">输入时间戳</label>
+            <input id="ts-input" type="number" class="w-48 border border-gray-300 rounded-lg p-2 text-sm font-mono" placeholder="e.g. 1745654400" oninput="tsToDate()">
+          </div>
+          <div>
+            <label class="block text-xs text-gray-500 mb-1">类型</label>
+            <select id="ts-type" onchange="tsToDate()" class="border border-gray-300 rounded-lg p-2 text-sm">
+              <option value="seconds">秒级 (10位)</option>
+              <option value="milliseconds">毫秒级 (13位)</option>
+            </select>
+          </div>
+          <button onclick="tsToDate()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium">转换</button>
+        </div>
+        <div id="ts-result" class="mt-2 text-sm font-mono text-gray-600"></div>
+      </div>
+
+      <!-- Convert: Date to Timestamp -->
+      <div class="mb-6">
+        <h3 class="text-sm font-semibold text-gray-700 mb-3">日期时间 → 时间戳</h3>
+        <div class="flex flex-wrap gap-3 items-end">
+          <div>
+            <label class="block text-xs text-gray-500 mb-1">选择日期时间</label>
+            <input id="dt-input" type="datetime-local" class="w-56 border border-gray-300 rounded-lg p-2 text-sm" onchange="dateToTs()">
+          </div>
+          <button onclick="dateToTs()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium">转换</button>
+        </div>
+        <div id="dt-result" class="mt-2">
+          <p class="text-sm font-mono text-gray-600"></p>
+        </div>
+      </div>
+
+      <!-- Timezone toggle -->
+      <div class="flex items-center gap-3 mt-4 pt-4 border-t border-gray-100">
+        <label class="flex items-center gap-2 text-sm text-gray-600 cursor-pointer">
+          <input type="checkbox" id="tz-toggle" onchange="updateAll()" class="rounded">
+          使用 UTC+0 (当前: UTC+8)
+        </label>
+        <span id="tz-label" class="text-xs text-gray-400">Asia/Shanghai (UTC+8)</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+function getOffset() {
+  return document.getElementById('tz-toggle').checked ? 0 : 8;
+}
+
+function formatDate(d, offset) {
+  const utc = d.getTime() + d.getTimezoneOffset() * 60000;
+  const local = new Date(utc + offset * 3600000);
+  return local.toISOString().replace('T', ' ').replace(/\.\d+Z/, '').substring(0, 19);
+}
+
+function updateCurrentTime() {
+  const now = new Date();
+  const offset = getOffset();
+  document.getElementById('current-time').textContent = formatDate(now, offset);
+}
+
+function tsToDate() {
+  const val = document.getElementById('ts-input').value.trim();
+  const type = document.getElementById('ts-type').value;
+  const offset = getOffset();
+  const el = document.getElementById('ts-result');
+
+  if (!val) { el.textContent = ''; return; }
+
+  const ts = type === 'seconds' ? parseInt(val) * 1000 : parseInt(val);
+  if (isNaN(ts)) { el.textContent = '❌ 无效的时间戳'; return; }
+
+  const d = new Date(ts);
+  if (isNaN(d.getTime())) { el.textContent = '❌ 无效的日期'; return; }
+
+  const dateStr = formatDate(d, offset);
+  const msStr = type === 'seconds' ? parseInt(val) : parseInt(val);
+  el.textContent = `📅 ${dateStr}`;
+}
+
+function dateToTs() {
+  const val = document.getElementById('dt-input').value;
+  const offset = getOffset();
+  const el = document.getElementById('dt-result');
+
+  if (!val) { el.textContent = '❌ 请选择日期时间'; return; }
+
+  const d = new Date(val);
+  if (isNaN(d.getTime())) { el.textContent = '❌ 无效的日期'; return; }
+
+  // Adjust for timezone offset
+  const utc = d.getTime() - d.getTimezoneOffset() * 60000;
+  const adjusted = utc - offset * 3600000;
+
+  el.innerHTML = `
+    <p class="text-sm font-mono text-gray-600">秒级: <strong>${Math.floor(adjusted / 1000)}</strong></p>
+    <p class="text-sm font-mono text-gray-600">毫秒级: <strong>${adjusted}</strong></p>
+  `;
+}
+
+function updateAll() {
+  const offset = getOffset();
+  document.getElementById('tz-label').textContent = offset === 8 ? 'Asia/Shanghai (UTC+8)' : 'UTC+0';
+  updateCurrentTime();
+  tsToDate();
+}
+
+// 初始设置当前时间
+document.getElementById('dt-input').value = new Date().toISOString().substring(0, 16);
+updateCurrentTime();
+setInterval(updateCurrentTime, 1000);
+</script>
