@@ -19,6 +19,7 @@ const tools = [
   // ── 文档处理 ──
   { id: 'md2pdf',    name: 'Markdown → PDF',  desc: '将 Markdown 文档转换为格式美观的 PDF',  icon: '📄', category: 'doc' },
   { id: 'markdown',  name: 'Markdown 格式化',   desc: 'Markdown 源码格式化、表格对齐、实时预览', icon: '📝', category: 'doc' },
+  { id: 'csv',       name: 'CSV 查看器',         desc: 'CSV 格式化浏览、CSV↔JSON 互转',        icon: '📊', category: 'doc' },
 
   // ── 多媒体 ──
   { id: 'image',     name: '图片处理',           desc: '图片压缩/格式转换/尺寸调整',               icon: '🖼️', category: 'media' },
@@ -32,6 +33,7 @@ const tools = [
   { id: 'roman',     name: '罗马数字转换',       desc: '阿拉伯数字与罗马数字互转',             icon: '🏛️', category: 'encode' },
   { id: 'unicode',   name: 'Unicode 工具',       desc: 'Unicode 编码/解码，多种格式输出',      icon: '🔣', category: 'encode' },
   { id: 'rot13',     name: 'ROT13/凯撒密码',      desc: 'ROT13/Rot-N 加密解密，暴力破解',        icon: '🔐', category: 'encode' },
+  { id: 'cipher',    name: '经典密码',            desc: '凯撒/Vigenère/Atbash/ROT47 加解密',   icon: '🔏', category: 'encode' },
 
   // ── 开发调试 ──
   { id: 'json',      name: 'JSON 格式化',       desc: 'JSON 格式化、压缩、校验',              icon: '🔧', category: 'dev' },
@@ -46,6 +48,8 @@ const tools = [
   { id: 'sql',       name: 'SQL 格式化',         desc: 'SQL 关键字大写、格式化与压缩',         icon: '🗄️', category: 'dev' },
   { id: 'toml',      name: 'TOML 格式化',         desc: 'TOML 格式化与 JSON 互转',              icon: '📋', category: 'dev' },
   { id: 'ini',       name: 'INI 格式化',          desc: 'INI 格式化与 JSON 互转',               icon: '⚙️', category: 'dev' },
+  { id: 'http',      name: 'HTTP 状态码查询',       desc: 'HTTP 状态码速查与搜索',                 icon: '📡', category: 'dev' },
+  { id: 'mime',      name: 'MIME 类型查询',         desc: 'MIME 类型/扩展名速查',                 icon: '📎', category: 'dev' },
 
   // ── 生成创建 ──
   { id: 'password',  name: '密码生成器',        desc: '可配置的强密码批量生成',              icon: '🔑', category: 'gen' },
@@ -61,6 +65,7 @@ const tools = [
   { id: 'mac',       name: 'MAC 地址查询',       desc: '查询 MAC 地址厂商，格式化转换',        icon: '🔌', category: 'info' },
   { id: 'dns',       name: 'DNS 查询',           desc: 'A/AAAA/MX/NS/TXT/CNAME/SOA 记录查询',  icon: '🌐', category: 'info' },
   { id: 'port',      name: '端口查询',           desc: '常用端口查询与速查表',                  icon: '🚪', category: 'info' },
+  { id: 'unit',      name: '单位转换器',           desc: '长度/重量/温度/体积/数据等 10 类单位转换', icon: '📏', category: 'info' },
 
   // ── 文本处理 ──
   { id: 'counter',   name: '文本统计',          desc: '字符、单词、行数、中文字数实时统计',    icon: '📊', category: 'text' },
@@ -69,6 +74,7 @@ const tools = [
   { id: 'slug',      name: 'Slug 生成器',         desc: '将标题文本转换为 URL 友好的 Slug',      icon: '🔗', category: 'text' },
   { id: 'palindrome',name: '回文检测',             desc: '回文字符串检测工具，支持中文',          icon: '🔄', category: 'text' },
   { id: 'anagram',   name: '字谜检测',             desc: 'Anagram 字谜检测与全文查找',            icon: '🔀', category: 'text' },
+  { id: 'wordcount', name: '词频统计',             desc: '字符/单词/句子统计 + 词频可视化排行榜', icon: '📈', category: 'text' },
 ]
 
 const viewDir = path.join(__dirname, '..', 'views')
