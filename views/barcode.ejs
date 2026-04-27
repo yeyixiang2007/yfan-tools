@@ -39,6 +39,7 @@
             <option value="CODE39">CODE39</option>
             <option value="ITF">ITF-14</option>
           </select>
+          <p id="format-hint" class="text-xs text-gray-400 mt-1"></p>
         </div>
         <div>
           <label class="block text-sm font-medium text-gray-700 mb-1">宽度</label>
@@ -82,6 +83,15 @@ function generateBarcode() {
   const height = parseInt(document.getElementById('barcode-height').value);
 
   try {
+    const container = document.getElementById('barcode-container');
+    const svg = document.getElementById('barcode-svg');
+    // 恢复 SVG 容器
+    container.innerHTML = '<svg id="barcode-svg"></svg>';
+    
+    // 格式提示
+    const tips = {CODE128:'任意字符', EAN13:'12 或 13 位数字', UPC:'11 或 12 位数字', CODE39:'字母/数字/-./空格', ITF:'偶数位数字', codabar:'A-D 开头结尾的数字' };
+    document.getElementById('format-hint').textContent = tips[format] || '';
+
     JsBarcode('#barcode-svg', text, {
       format: format,
       width: width,
@@ -90,15 +100,11 @@ function generateBarcode() {
       fontSize: 16,
       margin: 10,
       background: '#ffffff',
-      lineColor: '#000000',
-      valid: function(valid) {
-        if (!valid) {
-          document.getElementById('barcode-container').innerHTML = '<p class="text-red-500 text-sm">⚠️ 输入内容不符合所选编码格式</p>';
-        }
-      }
+      lineColor: '#000000'
     });
   } catch (e) {
-    document.getElementById('barcode-container').innerHTML = '<p class="text-red-500 text-sm">⚠️ 生成失败: ' + e.message + '</p>';
+    const msg = e.message && e.message !== 'undefined' ? e.message : '输入不符合 ' + format + ' 格式要求';
+    document.getElementById('barcode-container').innerHTML = '<p class="text-red-500 text-sm">⚠️ ' + msg + '</p>';
   }
 }
 
