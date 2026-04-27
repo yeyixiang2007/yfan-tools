@@ -1,0 +1,243 @@
+<%- /* content block for layout */ '' %>
+<% var content = ''; %>
+
+<div>
+  <div class="mb-6">
+    <a href="/" class="text-sm text-blue-500 hover:text-blue-700">&larr; 返回首页</a>
+  </div>
+
+  <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 md:p-8">
+    <div class="flex items-center gap-3 mb-4">
+      <span class="text-3xl"><%- tool.icon %></span>
+      <div>
+        <h1 class="text-2xl font-bold text-gray-800"><%- tool.name %></h1>
+        <p class="text-sm text-gray-500"><%- tool.desc %></p>
+      </div>
+    </div>
+
+    <div class="border-t border-gray-100 pt-4">
+      <!-- Toolbar -->
+      <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+        <div class="flex items-center gap-2">
+          <button class="px-3 py-1.5 text-sm rounded-lg font-medium tab-btn active" data-tab="html" onclick="switchTab('html')">HTML</button>
+          <button class="px-3 py-1.5 text-sm rounded-lg font-medium tab-btn" data-tab="css" onclick="switchTab('css')">CSS</button>
+          <button class="px-3 py-1.5 text-sm rounded-lg font-medium tab-btn" data-tab="js" onclick="switchTab('js')">JS</button>
+          <span class="text-gray-300 mx-1">|</span>
+          <button onclick="runCode()" class="px-4 py-1.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 text-sm font-medium">▶ 运行</button>
+          <button onclick="resetCode()" class="px-3 py-1.5 border border-gray-300 rounded-lg hover:bg-gray-50 text-sm">重置</button>
+        </div>
+        <div class="flex items-center gap-2">
+          <span class="text-xs text-gray-500">预览:</span>
+          <button class="px-2 py-1 text-xs rounded border viewport-btn active" data-w="100%" onclick="setViewport('100%')">桌面</button>
+          <button class="px-2 py-1 text-xs rounded border viewport-btn" data-w="768px" onclick="setViewport('768px')">平板</button>
+          <button class="px-2 py-1 text-xs rounded border viewport-btn" data-w="480px" onclick="setViewport('480px')">手机</button>
+          <span class="text-gray-300 mx-1">|</span>
+          <button onclick="exportCode()" class="px-3 py-1.5 border border-gray-300 rounded-lg hover:bg-gray-50 text-sm">导出</button>
+          <button onclick="copyCode()" class="px-3 py-1.5 border border-gray-300 rounded-lg hover:bg-gray-50 text-sm">复制</button>
+        </div>
+      </div>
+
+      <!-- Editor + Preview -->
+      <div class="flex flex-col lg:flex-row gap-3">
+        <!-- Editor -->
+        <div class="flex-1 min-w-0">
+          <div class="editor-panel border border-gray-200 rounded-lg overflow-hidden">
+            <textarea id="editor-html" class="code-editor active-editor" spellcheck="false"></textarea>
+            <textarea id="editor-css" class="code-editor" spellcheck="false"></textarea>
+            <textarea id="editor-js" class="code-editor" spellcheck="false"></textarea>
+          </div>
+        </div>
+
+        <!-- Preview -->
+        <div class="flex-1 min-w-0">
+          <div id="preview-container" class="border border-gray-200 rounded-lg overflow-hidden bg-white" style="max-width:100%">
+            <iframe id="preview-frame" class="w-full border-0" style="height:420px;background:#fff" sandbox="allow-scripts allow-modals allow-same-origin"></iframe>
+          </div>
+        </div>
+      </div>
+
+      <!-- Console -->
+      <div class="mt-3 border border-gray-200 rounded-lg overflow-hidden">
+        <div class="flex items-center justify-between px-3 py-1.5 bg-gray-50 border-b border-gray-200">
+          <span class="text-xs font-medium text-gray-600">控制台</span>
+          <button onclick="clearConsole()" class="text-xs text-gray-400 hover:text-gray-600">清除</button>
+        </div>
+        <div id="console-output" class="p-3 font-mono text-xs leading-relaxed max-h-32 overflow-y-auto text-gray-700">
+          <div class="text-gray-400">// 点击"运行"查看输出</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+// ── Templates ──
+var SERVER_DATA = <%- JSON.stringify({html:initialHtml||'',css:initialCss||'',js:initialJs||''}) %>;
+var INITIAL_TEMPLATES = {
+
+var TEMPLATES = {
+  html: '<div id="app">\n  <h1>Hello, Sandbox!</h1>\n  <p>点击按钮试试</p>\n  <button id="btn">Click Me</button>\n</div>',
+  css: 'body {\n  font-family: system-ui, sans-serif;\n  display: flex;\n  justify-content: center;\n  align-items: center;\n  min-height: 100vh;\n  margin: 0;\n  background: #f0f0f0;\n}\n#app { text-align: center; }\nbutton {\n  padding: 10px 24px;\n  border-radius: 8px;\n  border: none;\n  background: #6366f1;\n  color: white;\n  font-size: 16px;\n  cursor: pointer;\n}',
+  js: 'document.getElementById(\'btn\').addEventListener(\'click\', function() {\n  var msg = \'Hello from sandbox!\';\n  console.log(msg);\n  alert(msg);\n});'
+};
+
+var currentTab = 'html';
+var currentViewport = '100%';
+var renderTimer = null;
+
+function switchTab(tab) {
+  currentTab = tab;
+  document.querySelectorAll('.tab-btn').forEach(function(b) {
+    b.classList.toggle('active', b.dataset.tab === tab);
+  });
+  document.querySelectorAll('.code-editor').forEach(function(e) {
+    e.classList.toggle('active-editor', e.id === 'editor-' + tab);
+  });
+}
+
+function setViewport(w) {
+  currentViewport = w;
+  var container = document.getElementById('preview-container');
+  container.style.maxWidth = w;
+  // center if < 100%
+  if (w !== '100%') {
+    container.style.marginLeft = 'auto';
+    container.style.marginRight = 'auto';
+  } else {
+    container.style.marginLeft = '';
+    container.style.marginRight = '';
+  }
+  document.querySelectorAll('.viewport-btn').forEach(function(b) {
+    b.classList.toggle('active', b.dataset.w === w);
+  });
+}
+
+function runCode() {
+  var html = document.getElementById('editor-html').value;
+  var css = document.getElementById('editor-css').value;
+  var js = document.getElementById('editor-js').value;
+
+  var frame = document.getElementById('preview-frame');
+  var doc = '<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">';
+  doc += '<style>' + css + '</style></head><body>';
+  doc += html;
+  doc += '<script>(function() { var c = document.getElementById("console-frame"); if(!c) { c = document.createElement("div"); c.id = "console-frame"; c.style.display = "none"; document.body.appendChild(c); } var origLog = console.log; console.log = function() { var args = Array.prototype.slice.call(arguments); parent.postMessage({type:"console",method:"log",args:args.map(function(a){return typeof a==="object"?JSON.stringify(a):String(a)})},"*"); origLog.apply(console,arguments); }; var origWarn = console.warn; console.warn = function() { var args = Array.prototype.slice.call(arguments); parent.postMessage({type:"console",method:"warn",args:args.map(function(a){return typeof a==="object"?JSON.stringify(a):String(a)})},"*"); origWarn.apply(console,arguments); }; var origErr = console.error; console.error = function() { var args = Array.prototype.slice.call(arguments); parent.postMessage({type:"console",method:"error",args:args.map(function(a){return typeof a==="object"?JSON.stringify(a):String(a)})},"*"); origErr.apply(console,arguments); }; window.onerror = function(m,s,l,c,e) { parent.postMessage({type:"console",method:"error",args:[m+" ("+s+":"+l+")"]},"*"); }; })();<\/script>';
+  doc += '<script>' + js + '<\/script>';
+  doc += '</body></html>';
+
+  frame.srcdoc = doc;
+}
+
+function getEditorValue(id) {
+  var el = document.getElementById(id);
+  return el ? el.value : '';
+}
+
+function resetCode() {
+  document.getElementById('editor-html').value = TEMPLATES.html;
+  document.getElementById('editor-css').value = TEMPLATES.css;
+  document.getElementById('editor-js').value = TEMPLATES.js;
+  clearConsole();
+  runCode();
+}
+
+function clearConsole() {
+  document.getElementById('console-output').innerHTML = '';
+}
+
+function exportCode() {
+  var html = document.getElementById('editor-html').value;
+  var css = document.getElementById('editor-css').value;
+  var js = document.getElementById('editor-js').value;
+  var full = '<!DOCTYPE html>\n<html>\n<head>\n<meta charset="utf-8">\n<meta name="viewport" content="width=device-width,initial-scale=1">\n';
+  full += '<style>\n' + css + '\n</style>\n</head>\n<body>\n' + html + '\n';
+  full += '<script>\n' + js + '\n<\/script>\n</body>\n</html>';
+
+  var blob = new Blob([full], {type: 'text/html'});
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url;
+  a.download = 'sandbox-export.html';
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function copyCode() {
+  var html = document.getElementById('editor-html').value;
+  var css = document.getElementById('editor-css').value;
+  var js = document.getElementById('editor-js').value;
+  var full = '<!DOCTYPE html>\n<html>\n<head>\n<meta charset="utf-8">\n<meta name="viewport" content="width=device-width,initial-scale=1">\n';
+  full += '<style>\n' + css + '\n</style>\n</head>\n<body>\n' + html + '\n';
+  full += '<script>\n' + js + '\n<\/script>\n</body>\n</html>';
+
+  navigator.clipboard.writeText(full).then(function() {
+    var btn = document.querySelector('button:has(> span.copy-ok)');
+    if (!btn) document.querySelectorAll('button').forEach(function(b) { if(b.textContent.trim()==='复制') { var ot = b.textContent; b.textContent = '✓ 已复制'; setTimeout(function(){b.textContent=ot;},1500); }});
+  });
+}
+
+// ── Console message handler ──
+window.addEventListener('message', function(e) {
+  if (e.data && e.data.type === 'console') {
+    var output = document.getElementById('console-output');
+    var div = document.createElement('div');
+    var cls = e.data.method === 'error' ? 'text-red-600' : e.data.method === 'warn' ? 'text-yellow-600' : 'text-gray-700';
+    div.className = cls;
+    div.textContent = '> ' + e.data.args.join(' ');
+    output.appendChild(div);
+    output.scrollTop = output.scrollHeight;
+  }
+});
+
+// ── Init ──
+document.addEventListener('DOMContentLoaded', function() {
+  // textarea already has value from server-side injection
+  var h = document.getElementById('editor-html').value;
+  var c = document.getElementById('editor-css').value;
+  var j = document.getElementById('editor-js').value;
+  // If empty (no server data), use JS fallback templates
+  if (!h.trim() || h === '<%= initialHtml %>') {
+    document.getElementById('editor-html').value = TEMPLATES.html;
+  }
+  if (!c.trim() || c === '<%= initialCss %>') {
+    document.getElementById('editor-css').value = TEMPLATES.css;
+  }
+  if (!j.trim() || j === '<%= initialJs %>') {
+    document.getElementById('editor-js').value = TEMPLATES.js;
+  }
+  switchTab('html');
+  runCode();
+});
+</script>
+
+<style>
+.tab-btn { background: #f3f4f6; color: #6b7280; border: 1px solid #e5e7eb; transition: all .15s; }
+.tab-btn.active { background: #6366f1; color: #fff; border-color: #6366f1; }
+.tab-btn:hover:not(.active) { background: #e5e7eb; }
+
+.viewport-btn { background: #fff; color: #6b7280; border-color: #e5e7eb; }
+.viewport-btn.active { background: #eef2ff; color: #6366f1; border-color: #6366f1; }
+.viewport-btn:hover:not(.active) { background: #f9fafb; }
+
+.editor-panel { position: relative; min-height: 420px; }
+.code-editor {
+  display: none;
+  width: 100%;
+  min-height: 420px;
+  padding: 16px;
+  border: none;
+  font: 13px/1.6 'SF Mono','Fira Code','Cascadia Code','Consolas',monospace;
+  background: #1e1e2e;
+  color: #cdd6f4;
+  resize: vertical;
+  outline: none;
+  tab-size: 2;
+}
+.code-editor.active-editor { display: block; }
+
+@media (max-width: 1023px) {
+  .code-editor { min-height: 300px; }
+  #preview-frame { height: 320px; }
+}
+</style>
