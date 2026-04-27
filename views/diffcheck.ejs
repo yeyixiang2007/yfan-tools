@@ -137,7 +137,8 @@ function copyDiff() {
     const btn = document.querySelector('[onclick="copyDiff()"]');
     btn.textContent = '✅ 已复制';
     setTimeout(() => btn.textContent = '📋 复制', 1500);
-  });
+  })
+      .catch(function(err) { console.error(err); });;
 }
 
 function clearAll() {

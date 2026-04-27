@@ -125,7 +125,8 @@ function copyResult() {
     const btn = document.querySelector('[onclick="copyResult()"]');
     btn.textContent = '✅ 已复制';
     setTimeout(() => btn.textContent = '📋 复制', 1500);
-  });
+  })
+      .catch(function(err) { console.error(err); });;
 }
 
 function clearAll() { inputEl.value = ''; outputEl.value = ''; detailsEl.innerHTML = '输入文本后显示详情'; }

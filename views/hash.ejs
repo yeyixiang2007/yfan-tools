@@ -151,7 +151,8 @@ function copyHash(el) {
     const orig = label.textContent;
     label.textContent = '✅';
     setTimeout(() => label.textContent = orig, 1500);
-  });
+  })
+      .catch(function(err) { console.error(err); });;
 }
 
 function copyFileHash() {

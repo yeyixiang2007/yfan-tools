@@ -139,7 +139,8 @@ function copyResult() {
     const btn = event.target;
     btn.textContent = '✅ 已复制';
     setTimeout(() => btn.textContent = '复制结果', 1500);
-  });
+  })
+      .catch(function(err) { console.error(err); });;
 }
 
 function clearURL() {
