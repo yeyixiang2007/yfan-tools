@@ -64,6 +64,8 @@ const tools = [
   { id: 'emoji',     name: 'Emoji 搜索',           desc: 'Emoji 搜索与复制（分类/关键字搜索）',   icon: '😊', category: 'gen' },
   { id: 'charts',    name: 'ASCII 图表',           desc: '柱状图/折线图/饼图 ASCII 图表生成',      icon: '📈', category: 'gen' },
   { id: 'placeholder',name: '占位图生成器',          desc: '生成 SVG/PNG 占位图，自定义尺寸/颜色/文字', icon: '🖼️', category: 'gen' },
+  { id: 'codesnap',  name: '代码截图美化',         desc: '代码高亮卡片，多主题/背景/语言，导出图片', icon: '📸', category: 'gen' },
+  { id: 'mermaid',   name: 'Mermaid 流程图',       desc: 'Mermaid 流程图/时序图/类图/甘特图/饼图',  icon: '🔀', category: 'gen' },
 
   // ── 信息查询 ──
   { id: 'ip',        name: 'IP 信息查询',       desc: '查询 IP 归属地、运营商、ASN 等信息',   icon: '🌐', category: 'info' },
