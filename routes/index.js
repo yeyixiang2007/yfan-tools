@@ -21,11 +21,11 @@ const tools = [
   { id: 'markdown',  name: 'Markdown 格式化',   desc: 'Markdown 源码格式化、表格对齐、实时预览', icon: '📝', category: 'doc' },
   { id: 'csv',       name: 'CSV 查看器',         desc: 'CSV 格式化浏览、CSV↔JSON 互转',        icon: '📊', category: 'doc' },
   { id: 'diffcheck', name: '文本差异对比',         desc: 'LCS 算法逐行对比两段文本差异',           icon: '📑', category: 'doc' },
+  { id: 'pdf',       name: 'PDF 合并/拆分',        desc: '合并多个 PDF、提取指定页、每页拆分',      icon: '📎', category: 'doc' },
 
   // ── 多媒体 ──
   { id: 'image',     name: '图片处理',           desc: '图片压缩/格式转换/尺寸调整',               icon: '🖼️', category: 'media' },
   { id: 'colorpicker',name: '颜色拾取器',          desc: '可视化调色板，HEX/RGB/HSL/CMYK 互转',     icon: '🎨', category: 'media' },
-  { id: 'palette',   name: '图片配色提取',        desc: '上传图片自动提取配色方案，导出 CSS 变量',  icon: '🌈', category: 'media' },
 
   // ── 编码/转换 ──
   { id: 'base64',    name: 'Base64 编解码',     desc: 'Base64 编码与解码，支持中文',          icon: '🔐', category: 'encode' },
@@ -63,6 +63,7 @@ const tools = [
   { id: 'lorem',     name: 'Lorem Ipsum',         desc: 'Lorem Ipsum 假文生成器（单词/句子/段落）', icon: '📝', category: 'gen' },
   { id: 'emoji',     name: 'Emoji 搜索',           desc: 'Emoji 搜索与复制（分类/关键字搜索）',   icon: '😊', category: 'gen' },
   { id: 'charts',    name: 'ASCII 图表',           desc: '柱状图/折线图/饼图 ASCII 图表生成',      icon: '📈', category: 'gen' },
+  { id: 'placeholder',name: '占位图生成器',          desc: '生成 SVG/PNG 占位图，自定义尺寸/颜色/文字', icon: '🖼️', category: 'gen' },
 
   // ── 信息查询 ──
   { id: 'ip',        name: 'IP 信息查询',       desc: '查询 IP 归属地、运营商、ASN 等信息',   icon: '🌐', category: 'info' },
@@ -72,6 +73,7 @@ const tools = [
   { id: 'port',      name: '端口查询',           desc: '常用端口查询与速查表',                  icon: '🚪', category: 'info' },
   { id: 'unit',      name: '单位转换器',           desc: '长度/重量/温度/体积/数据等 10 类单位转换', icon: '📏', category: 'info' },
   { id: 'useragent', name: 'UA 解析器',            desc: 'User-Agent 字符串解析，识别浏览器/OS/设备', icon: '🌐', category: 'info' },
+  { id: 'exchange',  name: '货币汇率转换',         desc: '实时汇率查询与货币转换（20 种货币）',    icon: '💱', category: 'info' },
 
   // ── 文本处理 ──
   { id: 'counter',   name: '文本统计',          desc: '字符、单词、行数、中文字数实时统计',    icon: '📊', category: 'text' },
@@ -81,6 +83,7 @@ const tools = [
   { id: 'palindrome',name: '回文检测',             desc: '回文字符串检测工具，支持中文',          icon: '🔄', category: 'text' },
   { id: 'anagram',   name: '字谜检测',             desc: 'Anagram 字谜检测与全文查找',            icon: '🔀', category: 'text' },
   { id: 'wordcount', name: '词频统计',             desc: '字符/单词/句子统计 + 词频可视化排行榜', icon: '📈', category: 'text' },
+  { id: 'speedtest', name: '网速测试',           desc: '浏览器测速，测试下载/上传/Ping',         icon: '⚡', category: 'info' },
 ]
 
 const viewDir = path.join(__dirname, '..', 'views')

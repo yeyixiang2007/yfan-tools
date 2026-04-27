@@ -1,0 +1,144 @@
+<%- /* content block for layout */ '' %>
+<% var content = ''; %>
+
+<div>
+  <div class="mb-6">
+    <a href="/" class="text-sm text-blue-500 hover:text-blue-700">&larr; 返回首页</a>
+  </div>
+
+  <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 md:p-8">
+    <div class="flex items-center gap-3 mb-4">
+      <span class="text-3xl"><%- tool.icon %></span>
+      <div>
+        <h1 class="text-2xl font-bold text-gray-800"><%- tool.name %></h1>
+        <p class="text-sm text-gray-500"><%- tool.desc %></p>
+      </div>
+    </div>
+
+    <div class="border-t border-gray-100 pt-6 mt-2">
+      <div class="grid grid-cols-2 gap-4 mb-4">
+        <div>
+          <label class="block text-xs font-medium text-gray-700 mb-1">宽度 (px)</label>
+          <input id="ph-width" type="number" value="400" min="10" max="2000" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-gray-700 mb-1">高度 (px)</label>
+          <input id="ph-height" type="number" value="200" min="10" max="2000" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-gray-700 mb-1">背景色</label>
+          <input id="ph-bg" type="color" value="#e5e7eb" class="w-full h-10 p-0.5 border border-gray-300 rounded-lg cursor-pointer">
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-gray-700 mb-1">文字颜色</label>
+          <input id="ph-fg" type="color" value="#6b7280" class="w-full h-10 p-0.5 border border-gray-300 rounded-lg cursor-pointer">
+        </div>
+        <div class="col-span-2">
+          <label class="block text-xs font-medium text-gray-700 mb-1">文字内容（留空自动生成尺寸文本）</label>
+          <input id="ph-text" type="text" value="400 × 200" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm">
+        </div>
+      </div>
+
+      <div class="flex flex-wrap gap-2 mb-4">
+        <button onclick="generateSVG()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium">🖼️ 生成</button>
+        <button onclick="copySVG()" class="px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 text-sm font-medium">📋 复制 SVG</button>
+        <button onclick="downloadSVG()" class="px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 text-sm font-medium">⬇️ 下载 SVG</button>
+        <button onclick="downloadPNG()" class="px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 text-sm font-medium">⬇️ 下载 PNG</button>
+      </div>
+
+      <div id="ph-output" class="hidden flex flex-col md:flex-row gap-4">
+        <div class="flex-1">
+          <label class="block text-xs font-medium text-gray-600 mb-1">预览</label>
+          <div id="ph-preview" class="border border-gray-200 rounded-lg p-2 bg-gray-50 flex items-center justify-center min-h-[120px]"></div>
+        </div>
+        <div class="flex-1">
+          <label class="block text-xs font-medium text-gray-600 mb-1">SVG 源码</label>
+          <textarea id="ph-source" rows="6" class="w-full border border-gray-200 rounded-lg p-2 font-mono text-xs bg-gray-50" readonly></textarea>
+        </div>
+      </div>
+
+      <div class="mt-4 flex flex-wrap gap-2">
+        <span class="text-xs text-gray-500 p-1">预设尺寸:</span>
+        <button class="px-3 py-1 bg-gray-100 rounded text-xs hover:bg-gray-200" onclick="preset(150,150)">150×150</button>
+        <button class="px-3 py-1 bg-gray-100 rounded text-xs hover:bg-gray-200" onclick="preset(300,250)">300×250</button>
+        <button class="px-3 py-1 bg-gray-100 rounded text-xs hover:bg-gray-200" onclick="preset(728,90)">728×90</button>
+        <button class="px-3 py-1 bg-gray-100 rounded text-xs hover:bg-gray-200" onclick="preset(1200,630)">1200×630 (OG)</button>
+        <button class="px-3 py-1 bg-gray-100 rounded text-xs hover:bg-gray-200" onclick="preset(1920,1080)">1920×1080</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+let currentSVG = '';
+
+function generateSVG() {
+  const w = parseInt(document.getElementById('ph-width').value) || 400;
+  const h = parseInt(document.getElementById('ph-height').value) || 200;
+  const bg = document.getElementById('ph-bg').value;
+  const fg = document.getElementById('ph-fg').value;
+  let text = document.getElementById('ph-text').value.trim();
+  if (!text) text = `${w} × ${h}`;
+
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}">
+  <rect width="${w}" height="${h}" fill="${bg}"/>
+  <text x="50%" y="50%" dominant-baseline="central" text-anchor="middle"
+        fill="${fg}" font-family="system-ui,sans-serif" font-size="${Math.min(w,h) * 0.08}" font-weight="500">${escapeXml(text)}</text>
+</svg>`;
+
+  currentSVG = svg;
+  document.getElementById('ph-output').classList.remove('hidden');
+  document.getElementById('ph-preview').innerHTML = svg;
+  document.getElementById('ph-source').value = svg;
+}
+
+function copySVG() {
+  if (!currentSVG) return;
+  navigator.clipboard.writeText(currentSVG).then(() => {
+    const btn = document.querySelector('[onclick^="copySVG"]');
+    btn.textContent = '✅ 已复制';
+    setTimeout(() => btn.textContent = '📋 复制 SVG', 1500);
+  });
+}
+
+function downloadSVG() {
+  if (!currentSVG) return;
+  const blob = new Blob([currentSVG], {type: 'image/svg+xml'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'placeholder.svg'; a.click();
+  URL.revokeObjectURL(url);
+}
+
+function downloadPNG() {
+  if (!currentSVG) return;
+  const canvas = document.createElement('canvas');
+  const ctx = canvas.getContext('2d');
+  const img = new Image();
+  const svgBlob = new Blob([currentSVG], {type: 'image/svg+xml;charset=utf-8'});
+  const url = URL.createObjectURL(svgBlob);
+  img.onload = function() {
+    canvas.width = img.width; canvas.height = img.height;
+    ctx.drawImage(img, 0, 0);
+    canvas.toBlob(function(blob) {
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob); a.download = 'placeholder.png'; a.click();
+    });
+    URL.revokeObjectURL(url);
+  };
+  img.src = url;
+}
+
+function preset(w, h) {
+  document.getElementById('ph-width').value = w;
+  document.getElementById('ph-height').value = h;
+  document.getElementById('ph-text').value = `${w} × ${h}`;
+  generateSVG();
+}
+
+function escapeXml(s) {
+  return String(s).replace(/[&<>"]/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'})[m]);
+}
+
+generateSVG();
+</script>

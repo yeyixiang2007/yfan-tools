@@ -1,0 +1,246 @@
+<%- /* content block for layout */ '' %>
+<% var content = ''; %>
+
+<div>
+  <div class="mb-6">
+    <a href="/" class="text-sm text-blue-500 hover:text-blue-700">&larr; 返回首页</a>
+  </div>
+
+  <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 md:p-8">
+    <div class="flex items-center gap-3 mb-4">
+      <span class="text-3xl"><%- tool.icon %></span>
+      <div>
+        <h1 class="text-2xl font-bold text-gray-800"><%- tool.name %></h1>
+        <p class="text-sm text-gray-500"><%- tool.desc %></p>
+      </div>
+    </div>
+
+    <div class="border-t border-gray-100 pt-6 mt-2">
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+        <div class="p-4 bg-blue-50 rounded-lg text-center">
+          <div class="text-xs text-blue-600 font-medium mb-1">📥 下载</div>
+          <div id="speed-download" class="text-2xl font-bold text-blue-700">—</div>
+          <div class="text-xs text-blue-500 mt-0.5" id="speed-download-unit">Mbps</div>
+        </div>
+        <div class="p-4 bg-green-50 rounded-lg text-center">
+          <div class="text-xs text-green-600 font-medium mb-1">📤 上传</div>
+          <div id="speed-upload" class="text-2xl font-bold text-green-700">—</div>
+          <div class="text-xs text-green-500 mt-0.5" id="speed-upload-unit">Mbps</div>
+        </div>
+        <div class="p-4 bg-purple-50 rounded-lg text-center">
+          <div class="text-xs text-purple-600 font-medium mb-1">🔄 Ping</div>
+          <div id="speed-ping" class="text-2xl font-bold text-purple-700">—</div>
+          <div class="text-xs text-purple-500 mt-0.5">ms</div>
+        </div>
+        <div class="p-4 bg-orange-50 rounded-lg text-center">
+          <div class="text-xs text-orange-600 font-medium mb-1">🌍 IP</div>
+          <div id="speed-ip" class="text-sm font-bold text-orange-700 truncate">—</div>
+          <div class="text-xs text-orange-500 mt-0.5" id="speed-isp"></div>
+        </div>
+      </div>
+
+      <div class="flex flex-wrap gap-2 mb-4">
+        <button id="btn-start" onclick="startTest()" class="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium">🚀 开始测速</button>
+        <button onclick="clearResults()" class="px-4 py-3 bg-white border border-gray-300 text-gray-500 rounded-lg hover:bg-gray-50 text-sm">清空</button>
+      </div>
+
+      <div id="speed-progress" class="hidden mb-4">
+        <div class="flex items-center gap-3 mb-2">
+          <div class="flex-1 bg-gray-200 rounded-full h-2.5">
+            <div id="progress-bar" class="bg-blue-600 h-2.5 rounded-full transition-all duration-300" style="width:0%"></div>
+          </div>
+          <span id="progress-text" class="text-xs text-gray-500 w-12 text-right">0%</span>
+        </div>
+        <div id="speed-status" class="text-sm text-gray-600 text-center">初始化...</div>
+      </div>
+
+      <div id="speed-details" class="hidden mt-4 p-4 bg-gray-50 rounded-lg">
+        <h3 class="text-sm font-medium text-gray-700 mb-2">📋 测速详情</h3>
+        <div id="speed-log" class="text-xs font-mono text-gray-500 space-y-0.5 max-h-40 overflow-y-auto"></div>
+      </div>
+
+      <div class="mt-4 text-xs text-gray-400">
+        ⚠️ 浏览器测速受网络环境和浏览器限制，结果仅供参考。<br>
+        测速文件通过下载/上传随机数据计算速度。
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+let isTesting = false;
+
+async function startTest() {
+  if (isTesting) return;
+  isTesting = true;
+
+  const btn = document.getElementById('btn-start');
+  btn.textContent = '⏳ 测试中...';
+  btn.disabled = true;
+
+  document.getElementById('speed-progress').classList.remove('hidden');
+  document.getElementById('speed-details').classList.remove('hidden');
+
+  const log = document.getElementById('speed-log');
+  log.innerHTML = '';
+
+  function updateLog(msg) {
+    log.innerHTML += `<div>${msg}</div>`;
+    log.scrollTop = log.scrollHeight;
+  }
+
+  function setProgress(pct, text) {
+    document.getElementById('progress-bar').style.width = pct + '%';
+    document.getElementById('progress-text').textContent = pct + '%';
+    if (text) document.getElementById('speed-status').textContent = text;
+  }
+
+  try {
+    // Step 1: Ping
+    setProgress(5, '正在测 Ping...');
+    updateLog('🔄 测 Ping...');
+    const ping = await measurePing();
+    document.getElementById('speed-ping').textContent = ping;
+    updateLog(`  Ping: ${ping} ms`);
+
+    // Step 2: IP info
+    setProgress(10, '获取 IP 信息...');
+    updateLog('🌍 获取 IP...');
+    try {
+      const ipResp = await fetch('https://ipinfo.io/json');
+      const ipData = await ipResp.json();
+      document.getElementById('speed-ip').textContent = ipData.ip || '—';
+      document.getElementById('speed-isp').textContent = ipData.org || '';
+      updateLog(`  IP: ${ipData.ip}, ${ipData.org || ''}`);
+    } catch {
+      document.getElementById('speed-ip').textContent = '—';
+      updateLog('  IP 获取失败');
+    }
+
+    // Step 3: Download test
+    setProgress(20, '测下载速度 (0%)...');
+    updateLog('📥 测下载速度...');
+    const dlSpeed = await measureDownload((pct) => {
+      setProgress(20 + Math.round(pct * 60), `测下载速度 (${pct}%)...`);
+      updateLog(`  下载: ${pct}%`);
+    });
+    const dlMbps = (dlSpeed / 125000).toFixed(1); // bytes/sec to Mbps
+    document.getElementById('speed-download').textContent = dlMbps;
+    updateLog(`  下载速度: ${dlMbps} Mbps`);
+
+    // Step 4: Upload test
+    setProgress(85, '测上传速度...');
+    updateLog('📤 测上传速度...');
+    const ulSpeed = await measureUpload((pct) => {
+      setProgress(85 + Math.round(pct * 10), `测上传速度 (${pct}%)...`);
+      updateLog(`  上传: ${pct}%`);
+    });
+    const ulMbps = (ulSpeed / 125000).toFixed(1);
+    document.getElementById('speed-upload').textContent = ulMbps;
+    updateLog(`  上传速度: ${ulMbps} Mbps`);
+
+    setProgress(100, '测速完成 ✅');
+    updateLog('✅ 测速完成');
+  } catch(e) {
+    updateLog(`❌ 错误: ${e.message}`);
+    setProgress(0, '测速失败');
+  }
+
+  btn.textContent = '🚀 重新测速';
+  btn.disabled = false;
+  isTesting = false;
+}
+
+function measurePing() {
+  return new Promise((resolve) => {
+    const start = Date.now();
+    const img = new Image();
+    img.onload = () => resolve(Date.now() - start);
+    img.onerror = () => resolve(Date.now() - start);
+    img.src = 'https://www.google.com/favicon.ico?' + Math.random();
+    setTimeout(() => resolve(999), 5000);
+  });
+}
+
+function measureDownload(onProgress) {
+  return new Promise((resolve, reject) => {
+    const start = Date.now();
+    const xhr = new XMLHttpRequest();
+    const url = 'https://upload.wikimedia.org/wikipedia/commons/thumb/2/2f/Google_2015_logo.svg/500px-Google_2015_logo.svg.png?' + Math.random();
+
+    xhr.open('GET', url, true);
+    xhr.responseType = 'arraybuffer';
+
+    xhr.onprogress = (e) => {
+      if (e.lengthComputable && onProgress) {
+        onProgress(Math.round((e.loaded / e.total) * 100));
+      }
+    };
+
+    xhr.onload = function() {
+      const elapsed = (Date.now() - start) / 1000;
+      if (elapsed > 0) {
+        resolve(xhr.response.byteLength / elapsed);
+      } else {
+        reject(new Error('太快了'));
+      }
+    };
+
+    xhr.onerror = () => reject(new Error('下载失败'));
+    xhr.send();
+  });
+}
+
+function measureUpload(onProgress) {
+  return new Promise((resolve, reject) => {
+    const size = 1024 * 1024; // 1MB
+    const data = new Blob([new Uint8Array(size)]);
+    const start = Date.now();
+
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', 'https://httpbin.org/post', true);
+
+    xhr.upload.onprogress = (e) => {
+      if (e.lengthComputable && onProgress) {
+        onProgress(Math.round((e.loaded / e.total) * 100));
+      }
+    };
+
+    xhr.onload = function() {
+      const elapsed = (Date.now() - start) / 1000;
+      if (elapsed > 0) {
+        resolve(size / elapsed);
+      } else {
+        resolve(0);
+      }
+    };
+
+    xhr.onerror = () => {
+      // fallback: estimate based on timing
+      const elapsed = (Date.now() - start) / 1000;
+      if (elapsed > 0) resolve(size / elapsed);
+      else reject(new Error('上传失败'));
+    };
+
+    xhr.send(data);
+    setTimeout(() => {
+      if (xhr.readyState < 4) {
+        xhr.abort();
+        const elapsed = (Date.now() - start) / 1000;
+        if (elapsed > 0) resolve(size / elapsed);
+        else reject(new Error('上传超时'));
+      }
+    }, 15000);
+  });
+}
+
+function clearResults() {
+  document.getElementById('speed-download').textContent = '—';
+  document.getElementById('speed-upload').textContent = '—';
+  document.getElementById('speed-ping').textContent = '—';
+  document.getElementById('speed-ip').textContent = '—';
+  document.getElementById('speed-isp').textContent = '';
+  document.getElementById('speed-progress').classList.add('hidden');
+  document.getElementById('speed-details').classList.add('hidden');
+}
+</script>
