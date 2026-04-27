@@ -129,9 +129,9 @@ function generateCard() {
       <span style="flex:1;"></span>
       <span style="color:rgba(255,255,255,0.3);font-size:11px;font-family:monospace;">${lang.toUpperCase()}</span>
     </div>
-    <pre style="color:${theme.text};font-size:13px;line-height:1.6;overflow-x:auto;padding-bottom:16px;"><code>${highlighted}</code></pre>
+    <pre style="color:${theme.text};font-size:13px;line-height:1.6;overflow-x:auto;padding-bottom:16px;margin:0;white-space:pre-wrap;word-break:break-all"><code>${highlighted}</code></pre>
   </div>
-</div>`.replace(/\n\s*/g, '');
+</div>`.trim();
 
   document.getElementById('card-preview').innerHTML = html;
 }
