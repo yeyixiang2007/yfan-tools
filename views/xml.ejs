@@ -1,0 +1,153 @@
+<%- /* content block for layout */ '' %>
+<% var content = ''; %>
+
+<div>
+  <div class="mb-6">
+    <a href="/" class="text-sm text-blue-500 hover:text-blue-700">&larr; 返回首页</a>
+  </div>
+
+  <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 md:p-8">
+    <div class="flex items-center gap-3 mb-4">
+      <span class="text-3xl"><%- tool.icon %></span>
+      <div>
+        <h1 class="text-2xl font-bold text-gray-800"><%- tool.name %></h1>
+        <p class="text-sm text-gray-500"><%- tool.desc %></p>
+      </div>
+    </div>
+
+    <div class="border-t border-gray-100 pt-6 mt-2">
+      <div class="flex flex-wrap gap-2 mb-4">
+        <button onclick="formatXml()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium">✨ 格式化</button>
+        <button onclick="minifyXml()" class="px-4 py-2 bg-gray-800 text-white rounded-lg hover:bg-gray-900 text-sm font-medium">🔽 压缩</button>
+        <button onclick="copyResult()" class="px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 text-sm font-medium">📋 复制</button>
+        <button onclick="clearAll()" class="px-4 py-2 bg-white border border-gray-300 text-gray-500 rounded-lg hover:bg-gray-50 text-sm font-medium">清空</button>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">输入 XML</label>
+          <textarea id="xml-input" rows="14" class="w-full border border-gray-300 rounded-lg p-3 font-mono text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" spellcheck="false" placeholder="粘贴 XML..." oninput="autoFormat()">
+<root>
+<user id="1"><name>张三</name><email>zhang@example.com</email></user>
+<user id="2"><name>李四</name><email>li@example.com</email></user>
+</root></textarea>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">输出</label>
+          <textarea id="xml-output" rows="14" class="w-full border border-gray-300 rounded-lg p-3 font-mono text-sm bg-gray-50" spellcheck="false" placeholder="结果..." readonly></textarea>
+        </div>
+      </div>
+
+      <div id="xml-status" class="text-sm text-gray-500"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+const inputEl = document.getElementById('xml-input');
+const outputEl = document.getElementById('xml-output');
+const statusEl = document.getElementById('xml-status');
+
+let formatTimer = null;
+function autoFormat() { clearTimeout(formatTimer); formatTimer = setTimeout(formatXml, 500); }
+
+function formatXml() {
+  const text = inputEl.value.trim();
+  if (!text) return;
+
+  try {
+    const parser = new DOMParser();
+    const xmlDoc = parser.parseFromString(text, 'text/xml');
+    const errors = xmlDoc.getElementsByTagName('parsererror');
+    if (errors.length > 0) {
+      statusEl.textContent = '❌ XML 格式错误';
+      return;
+    }
+
+    const serializer = new XMLSerializer();
+    const formatted = formatXmlNode(xmlDoc.documentElement, 0);
+    outputEl.value = '<?xml version="1.0" encoding="UTF-8"?>\n' + formatted;
+    statusEl.textContent = '✅ 格式化完成';
+  } catch (e) {
+    statusEl.textContent = '❌ 格式化失败: ' + e.message;
+  }
+}
+
+function formatXmlNode(node, indent) {
+  const pad = '  '.repeat(indent);
+  let result = '';
+
+  if (node.nodeType === 3) { // text
+    const t = node.nodeValue.trim();
+    return t ? t : '';
+  }
+  if (node.nodeType === 4) { // CDATA
+    return pad + '<![CDATA[' + node.nodeValue + ']]>\n';
+  }
+  if (node.nodeType === 7) { // processing instruction
+    return pad + '<?' + node.nodeName + ' ' + node.nodeValue + '?>\n';
+  }
+
+  const tagName = node.nodeName;
+  const attrs = [];
+  for (let i = 0; i < (node.attributes || []).length; i++) {
+    const a = node.attributes[i];
+    attrs.push(a.name + '="' + a.value.replace(/"/g, '&quot;') + '"');
+  }
+  const attrStr = attrs.length > 0 ? ' ' + attrs.join(' ') : '';
+
+  const children = [];
+  let hasText = false;
+  for (let i = 0; i < node.childNodes.length; i++) {
+    const child = node.childNodes[i];
+    children.push(child);
+    if (child.nodeType === 3 && child.nodeValue.trim()) hasText = true;
+  }
+
+  if (children.length === 0 || (children.length === 1 && children[0].nodeType === 3 && !children[0].nodeValue.trim())) {
+    return pad + '<' + tagName + attrStr + '/>\n';
+  }
+
+  if (children.length === 1 && children[0].nodeType === 3) {
+    return pad + '<' + tagName + attrStr + '>' + escapeXml(children[0].nodeValue.trim()) + '</' + tagName + '>\n';
+  }
+
+  result = pad + '<' + tagName + attrStr + '>\n';
+  let hasNonText = false;
+  for (const child of children) {
+    if (child.nodeType === 3) {
+      const t = child.nodeValue.trim();
+      if (t) { result += pad + '  ' + escapeXml(t) + '\n'; }
+    } else {
+      result += formatXmlNode(child, indent + 1);
+      hasNonText = true;
+    }
+  }
+  if (!hasNonText) result = result.replace(/\n$/, '');
+  result += pad + '</' + tagName + '>\n';
+  return result;
+}
+
+function escapeXml(s) {
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+function minifyXml() {
+  const text = inputEl.value.trim();
+  if (!text) return;
+  outputEl.value = text.replace(/>\s+</g, '><').replace(/\s+/g, ' ').trim();
+  statusEl.textContent = '✅ 压缩完成';
+}
+
+function copyResult() {
+  const text = outputEl.value;
+  if (!text) return;
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = document.querySelector('[onclick="copyResult()"]');
+    btn.textContent = '✅ 已复制';
+    setTimeout(() => btn.textContent = '📋 复制', 1500);
+  });
+}
+
+function clearAll() { inputEl.value = ''; outputEl.value = ''; statusEl.textContent = ''; }
+</script>

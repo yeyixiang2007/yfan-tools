@@ -1,0 +1,133 @@
+<%- /* content block for layout */ '' %>
+<% var content = ''; %>
+
+<div>
+  <div class="mb-6">
+    <a href="/" class="text-sm text-blue-500 hover:text-blue-700">&larr; 返回首页</a>
+  </div>
+
+  <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 md:p-8">
+    <div class="flex items-center gap-3 mb-4">
+      <span class="text-3xl"><%- tool.icon %></span>
+      <div>
+        <h1 class="text-2xl font-bold text-gray-800"><%- tool.name %></h1>
+        <p class="text-sm text-gray-500"><%- tool.desc %></p>
+      </div>
+    </div>
+
+    <div class="border-t border-gray-100 pt-6 mt-2">
+      <div class="flex flex-wrap gap-2 mb-4">
+        <button onclick="convertCase('upper')" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium">大写</button>
+        <button onclick="convertCase('lower')" class="px-4 py-2 bg-gray-800 text-white rounded-lg hover:bg-gray-900 text-sm font-medium">小写</button>
+        <button onclick="convertCase('title')" class="px-4 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-800 text-sm font-medium">首字母大写</button>
+        <button onclick="convertCase('sentence')" class="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 text-sm font-medium">句首大写</button>
+        <button onclick="convertCase('camel')" class="px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 text-sm font-medium">camelCase</button>
+        <button onclick="convertCase('snake')" class="px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 text-sm font-medium">snake_case</button>
+        <button onclick="convertCase('kebab')" class="px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 text-sm font-medium">kebab-case</button>
+        <button onclick="convertCase('pascal')" class="px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 text-sm font-medium">PascalCase</button>
+        <button onclick="copyResult()" class="px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 text-sm font-medium">📋 复制</button>
+        <button onclick="clearAll()" class="px-4 py-2 bg-white border border-gray-300 text-gray-500 rounded-lg hover:bg-gray-50 text-sm font-medium">清空</button>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">原始文本</label>
+          <textarea id="case-input" rows="8" class="w-full border border-gray-300 rounded-lg p-3 font-mono text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" spellcheck="false" placeholder="输入文本...">hello world from yfan tools</textarea>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">转换结果</label>
+          <textarea id="case-output" rows="8" class="w-full border border-gray-300 rounded-lg p-3 font-mono text-sm bg-gray-50 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" spellcheck="false" readonly></textarea>
+        </div>
+      </div>
+
+      <div id="case-preview" class="grid grid-cols-2 md:grid-cols-4 gap-2 text-sm">
+        <div class="p-3 bg-gray-50 border border-gray-100 rounded-lg cursor-pointer hover:bg-blue-50" onclick="convertCase('upper')">
+          <div class="text-xs text-gray-400">大写</div>
+          <div class="font-mono text-gray-800" id="preview-upper">HELLO WORLD</div>
+        </div>
+        <div class="p-3 bg-gray-50 border border-gray-100 rounded-lg cursor-pointer hover:bg-blue-50" onclick="convertCase('lower')">
+          <div class="text-xs text-gray-400">小写</div>
+          <div class="font-mono text-gray-800" id="preview-lower">hello world</div>
+        </div>
+        <div class="p-3 bg-gray-50 border border-gray-100 rounded-lg cursor-pointer hover:bg-blue-50" onclick="convertCase('camel')">
+          <div class="text-xs text-gray-400">驼峰</div>
+          <div class="font-mono text-gray-800" id="preview-camel">helloWorld</div>
+        </div>
+        <div class="p-3 bg-gray-50 border border-gray-100 rounded-lg cursor-pointer hover:bg-blue-50" onclick="convertCase('snake')">
+          <div class="text-xs text-gray-400">下划线</div>
+          <div class="font-mono text-gray-800" id="preview-snake">hello_world</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const inputEl = document.getElementById('case-input');
+const outputEl = document.getElementById('case-output');
+
+function convertCase(mode) {
+  const text = inputEl.value;
+  let result = '';
+
+  switch (mode) {
+    case 'upper':
+      result = text.toUpperCase();
+      break;
+    case 'lower':
+      result = text.toLowerCase();
+      break;
+    case 'title':
+      result = text.replace(/\b\w/g, ch => ch.toUpperCase());
+      break;
+    case 'sentence':
+      result = text.replace(/(^\s*\w|[.!?]\s*\w)/g, ch => ch.toUpperCase());
+      break;
+    case 'camel':
+      result = text.replace(/[-_\s]+(.)/g, (_, ch) => ch.toUpperCase())
+                   .replace(/^[A-Z]/, ch => ch.toLowerCase())
+                   .replace(/[-_\s]/g, '');
+      break;
+    case 'snake':
+      result = text.replace(/([A-Z])/g, '_$1').toLowerCase()
+                   .replace(/[-_\s]+/g, '_')
+                   .replace(/^_/, '');
+      break;
+    case 'kebab':
+      result = text.replace(/([A-Z])/g, '-$1').toLowerCase()
+                   .replace(/[_\s]+/g, '-')
+                   .replace(/^-/, '');
+      break;
+    case 'pascal':
+      result = text.replace(/[-_\s]+(.)/g, (_, ch) => ch.toUpperCase())
+                   .replace(/^[a-z]/, ch => ch.toUpperCase())
+                   .replace(/[-_\s]/g, '');
+      break;
+  }
+
+  outputEl.value = result;
+  updatePreviews(text);
+}
+
+function updatePreviews(text) {
+  const firstWord = text.split(/[\s,;.-]+/)[0] || text;
+  document.getElementById('preview-upper').textContent = firstWord.toUpperCase().substring(0, 15);
+  document.getElementById('preview-lower').textContent = firstWord.toLowerCase().substring(0, 15);
+  document.getElementById('preview-camel').textContent = firstWord.replace(/([A-Z])/g, '_$1').toLowerCase().replace(/^_/, '').substring(0, 15);
+  document.getElementById('preview-snake').textContent = firstWord.toLowerCase().substring(0, 15);
+}
+
+function copyResult() {
+  const text = outputEl.value;
+  if (!text) return;
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = document.querySelector('[onclick="copyResult()"]');
+    btn.textContent = '✅ 已复制';
+    setTimeout(() => btn.textContent = '📋 复制', 1500);
+  });
+}
+
+function clearAll() { inputEl.value = ''; outputEl.value = ''; }
+
+convertCase('upper');
+</script>
