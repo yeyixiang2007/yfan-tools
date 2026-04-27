@@ -1,0 +1,157 @@
+<%- /* content block for layout */ '' %>
+<% var content = ''; %>
+
+<div>
+  <div class="mb-6">
+    <a href="/" class="text-sm text-blue-500 hover:text-blue-700">&larr; 返回首页</a>
+  </div>
+
+  <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 md:p-8">
+    <div class="flex items-center gap-3 mb-4">
+      <span class="text-3xl"><%- tool.icon %></span>
+      <div>
+        <h1 class="text-2xl font-bold text-gray-800"><%- tool.name %></h1>
+        <p class="text-sm text-gray-500"><%- tool.desc %></p>
+      </div>
+    </div>
+
+    <div class="border-t border-gray-100 pt-6 mt-2">
+      <div class="flex flex-wrap gap-2 mb-4">
+        <button onclick="formatIni()" class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium">✨ 格式化</button>
+        <button onclick="iniToJson()" class="px-4 py-2 bg-gray-800 text-white rounded-lg hover:bg-gray-900 text-sm font-medium">INI → JSON</button>
+        <button onclick="jsonToIni()" class="px-4 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-800 text-sm font-medium">JSON → INI</button>
+        <button onclick="copyResult()" class="px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 text-sm font-medium">📋 复制</button>
+        <button onclick="clearAll()" class="px-4 py-2 bg-white border border-gray-300 text-gray-500 rounded-lg hover:bg-gray-50 text-sm font-medium">清空</button>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">输入</label>
+          <textarea id="ini-input" rows="14" class="w-full border border-gray-300 rounded-lg p-3 font-mono text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" spellcheck="false" placeholder="粘贴 INI 或 JSON..." oninput="autoDetect()">; Database config
+[database]
+server = 127.0.0.1
+port = 3306
+name = myapp
+enabled = true
+
+[user]
+name = admin
+email = admin@example.com</textarea>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">输出</label>
+          <textarea id="ini-output" rows="14" class="w-full border border-gray-300 rounded-lg p-3 font-mono text-sm bg-gray-50 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none" readonly placeholder="结果..."></textarea>
+        </div>
+      </div>
+
+      <div id="ini-status" class="text-sm text-gray-500"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+const inputEl = document.getElementById('ini-input');
+const outputEl = document.getElementById('ini-output');
+const statusEl = document.getElementById('ini-status');
+
+let detectTimer = null;
+function autoDetect() { clearTimeout(detectTimer); detectTimer = setTimeout(detectAndConvert, 500); }
+
+function detectAndConvert() {
+  const text = inputEl.value.trim();
+  if (!text) return;
+  if (text.startsWith('{') || text.startsWith('[')) { jsonToIni(); } else { formatIni(); }
+}
+
+function parseIni(text) {
+  const result = {};
+  let currentSection = result;
+  const lines = text.split('\n');
+
+  for (let line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith(';') || trimmed.startsWith('#') || trimmed.startsWith('//')) continue;
+
+    const sectionMatch = trimmed.match(/^\[([^\]]+)\]$/);
+    if (sectionMatch) {
+      const sectionName = sectionMatch[1].trim();
+      if (!result[sectionName]) result[sectionName] = {};
+      currentSection = result[sectionName];
+      continue;
+    }
+
+    const kvMatch = trimmed.match(/^([^=]+)=(.+)$/);
+    if (kvMatch) {
+      const key = kvMatch[1].trim();
+      let val = kvMatch[2].trim();
+
+      if (val === 'true') val = true;
+      else if (val === 'false') val = false;
+      else if (!isNaN(val)) val = Number(val);
+      else if ((val.startsWith('"') && val.endsWith('"'))) val = val.slice(1, -1);
+
+      currentSection[key] = val;
+    }
+  }
+  return result;
+}
+
+function objToIni(obj) {
+  let result = '';
+
+  for (const [section, values] of Object.entries(obj)) {
+    if (typeof values === 'object' && values !== null) {
+      result += `[${section}]\n`;
+      for (const [k, v] of Object.entries(values)) {
+        result += `${k} = ${typeof v === 'string' ? v : v}\n`;
+      }
+    } else {
+      result += `${section} = ${typeof values === 'string' ? values : values}\n`;
+    }
+    result += '\n';
+  }
+  return result.trimEnd();
+}
+
+function formatIni() {
+  try {
+    const obj = parseIni(inputEl.value);
+    outputEl.value = objToIni(obj);
+    statusEl.textContent = '✅ 格式化完成';
+  } catch (e) {
+    statusEl.textContent = '❌ 解析失败: ' + e.message;
+  }
+}
+
+function iniToJson() {
+  try {
+    const obj = parseIni(inputEl.value);
+    outputEl.value = JSON.stringify(obj, null, 2);
+    statusEl.textContent = '✅ 转换成功';
+  } catch (e) {
+    statusEl.textContent = '❌ 转换失败: ' + e.message;
+  }
+}
+
+function jsonToIni() {
+  try {
+    const obj = JSON.parse(inputEl.value);
+    outputEl.value = objToIni(obj);
+    statusEl.textContent = '✅ 转换成功';
+  } catch (e) {
+    statusEl.textContent = '❌ JSON 解析失败: ' + e.message;
+  }
+}
+
+function copyResult() {
+  const text = outputEl.value;
+  if (!text) return;
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = document.querySelector('[onclick="copyResult()"]');
+    btn.textContent = '✅ 已复制';
+    setTimeout(() => btn.textContent = '📋 复制', 1500);
+  });
+}
+
+function clearAll() { inputEl.value = ''; outputEl.value = ''; statusEl.textContent = ''; }
+</script>

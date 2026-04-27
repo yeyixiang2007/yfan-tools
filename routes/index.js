@@ -11,6 +11,7 @@ const categories = [
   { id: 'gen',    name: '生成创建',     icon: '✨' },
   { id: 'info',   name: '信息查询',     icon: '🔍' },
   { id: 'text',   name: '文本处理',     icon: '📝' },
+  { id: 'media',  name: '多媒体',       icon: '🎨' },
 ]
 
 const tools = [
@@ -18,6 +19,9 @@ const tools = [
   // ── 文档处理 ──
   { id: 'md2pdf',    name: 'Markdown → PDF',  desc: '将 Markdown 文档转换为格式美观的 PDF',  icon: '📄', category: 'doc' },
   { id: 'markdown',  name: 'Markdown 格式化',   desc: 'Markdown 源码格式化、表格对齐、实时预览', icon: '📝', category: 'doc' },
+
+  // ── 多媒体 ──
+  { id: 'image',     name: '图片处理',           desc: '图片压缩/格式转换/尺寸调整',               icon: '🖼️', category: 'media' },
 
   // ── 编码/转换 ──
   { id: 'base64',    name: 'Base64 编解码',     desc: 'Base64 编码与解码，支持中文',          icon: '🔐', category: 'encode' },
@@ -27,6 +31,7 @@ const tools = [
   { id: 'morse',     name: '摩尔斯电码',         desc: '文字与摩尔斯电码互转，支持音频播放',    icon: '📡', category: 'encode' },
   { id: 'roman',     name: '罗马数字转换',       desc: '阿拉伯数字与罗马数字互转',             icon: '🏛️', category: 'encode' },
   { id: 'unicode',   name: 'Unicode 工具',       desc: 'Unicode 编码/解码，多种格式输出',      icon: '🔣', category: 'encode' },
+  { id: 'rot13',     name: 'ROT13/凯撒密码',      desc: 'ROT13/Rot-N 加密解密，暴力破解',        icon: '🔐', category: 'encode' },
 
   // ── 开发调试 ──
   { id: 'json',      name: 'JSON 格式化',       desc: 'JSON 格式化、压缩、校验',              icon: '🔧', category: 'dev' },
@@ -39,6 +44,8 @@ const tools = [
   { id: 'yaml',      name: 'YAML/JSON 互转',     desc: 'YAML 与 JSON 格式双向转换',            icon: '📋', category: 'dev' },
   { id: 'xml',       name: 'XML 格式化',         desc: 'XML 格式化、压缩、校验',               icon: '📄', category: 'dev' },
   { id: 'sql',       name: 'SQL 格式化',         desc: 'SQL 关键字大写、格式化与压缩',         icon: '🗄️', category: 'dev' },
+  { id: 'toml',      name: 'TOML 格式化',         desc: 'TOML 格式化与 JSON 互转',              icon: '📋', category: 'dev' },
+  { id: 'ini',       name: 'INI 格式化',          desc: 'INI 格式化与 JSON 互转',               icon: '⚙️', category: 'dev' },
 
   // ── 生成创建 ──
   { id: 'password',  name: '密码生成器',        desc: '可配置的强密码批量生成',              icon: '🔑', category: 'gen' },
@@ -46,6 +53,7 @@ const tools = [
   { id: 'qrcode',    name: '二维码生成',        desc: '输入文本生成可下载的二维码图片',        icon: '📱', category: 'gen' },
   { id: 'barcode',   name: '条形码生成',          desc: '支持 CODE128/EAN13/UPC 等格式',        icon: '🏷️', category: 'gen' },
   { id: 'lorem',     name: 'Lorem Ipsum',         desc: 'Lorem Ipsum 假文生成器（单词/句子/段落）', icon: '📝', category: 'gen' },
+  { id: 'emoji',     name: 'Emoji 搜索',           desc: 'Emoji 搜索与复制（分类/关键字搜索）',   icon: '😊', category: 'gen' },
 
   // ── 信息查询 ──
   { id: 'ip',        name: 'IP 信息查询',       desc: '查询 IP 归属地、运营商、ASN 等信息',   icon: '🌐', category: 'info' },
@@ -59,6 +67,8 @@ const tools = [
   { id: 'textsort',  name: '文本排序/去重',      desc: '升序/降序/去重/打乱/添加行号等',        icon: '📋', category: 'text' },
   { id: 'caseconv',  name: '字母大小写转换',      desc: '大写/小写/首字母/驼峰/下划线/连字符',  icon: '🔤', category: 'text' },
   { id: 'slug',      name: 'Slug 生成器',         desc: '将标题文本转换为 URL 友好的 Slug',      icon: '🔗', category: 'text' },
+  { id: 'palindrome',name: '回文检测',             desc: '回文字符串检测工具，支持中文',          icon: '🔄', category: 'text' },
+  { id: 'anagram',   name: '字谜检测',             desc: 'Anagram 字谜检测与全文查找',            icon: '🔀', category: 'text' },
 ]
 
 const viewDir = path.join(__dirname, '..', 'views')
