@@ -25,6 +25,7 @@ const tools = [
   // ── 多媒体 ──
   { id: 'image',     name: '图片处理',           desc: '图片压缩/格式转换/尺寸调整',               icon: '🖼️', category: 'media' },
   { id: 'colorpicker',name: '颜色拾取器',          desc: '可视化调色板，HEX/RGB/HSL/CMYK 互转',     icon: '🎨', category: 'media' },
+  { id: 'palette',   name: '图片配色提取',        desc: '上传图片自动提取配色方案，导出 CSS 变量',  icon: '🌈', category: 'media' },
 
   // ── 编码/转换 ──
   { id: 'base64',    name: 'Base64 编解码',     desc: 'Base64 编码与解码，支持中文',          icon: '🔐', category: 'encode' },
