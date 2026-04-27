@@ -64,7 +64,7 @@
   </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@9.4.3/dist/mermaid.min.js"></script>
 <script>
 mermaid.initialize({ startOnLoad: false, securityLevel: 'loose' });
 
@@ -77,42 +77,53 @@ function renderMermaid() {
   const code = document.getElementById('mermaid-input').value.trim();
   if (!code) return;
 
-  const theme = document.getElementById('mermaid-theme').value;
-  const dir = document.getElementById('mermaid-dir').value;
-
   const output = document.getElementById('mermaid-output');
   const loading = document.getElementById('mermaid-loading');
   const error = document.getElementById('mermaid-error');
 
   output.innerHTML = '';
   error.classList.add('hidden');
+  loading.style.display = '';
 
-  // Inject direction into graph type diagrams
   let processed = code;
   if (code.startsWith('graph ')) {
-    const lines = code.split('\n');
-    const first = lines[0];
-    const rest = lines.slice(1).join('\n');
-    if (!first.includes('TB') && !first.includes('LR') && !first.includes('BT') && !first.includes('RL')) {
-      processed = first.replace('graph', `graph ${dir}`) + '\n' + rest;
+    const dir = document.getElementById('mermaid-dir').value;
+    const lines = code.split(String.fromCharCode(10));
+    if (!lines[0].includes('TB') && !lines[0].includes('LR') && !lines[0].includes('BT') && !lines[0].includes('RL')) {
+      lines[0] = 'graph ' + dir;
+      processed = lines.join(String.fromCharCode(10));
     }
   }
 
-  const id = 'mermaid-' + Date.now();
+  const id = 'mmd-' + Date.now();
 
-  mermaid.mermaidAPI.render(id, processed, (svgCode) => {
-    output.innerHTML = svgCode;
-    const svgEl = output.querySelector('svg');
-    if (svgEl) {
-      svgEl.style.maxWidth = '100%';
-      svgEl.style.height = 'auto';
-    }
-    loading.style.display = 'none';
-  }, (err) => {
+  if (typeof mermaid === 'undefined') {
     error.classList.remove('hidden');
-    error.textContent = '❌ ' + err.message;
+    error.textContent = 'Mermaid library not loaded';
     loading.style.display = 'none';
-  });
+    return;
+  }
+
+  if (typeof mermaid.mermaidAPI !== 'undefined' && mermaid.mermaidAPI.render) {
+    mermaid.mermaidAPI.render(id, processed, function(svg) {
+      output.innerHTML = svg;
+      loading.style.display = 'none';
+    }, function(msg) {
+      error.classList.remove('hidden');
+      error.textContent = String(msg);
+      loading.style.display = 'none';
+    });
+  } else if (typeof mermaid.render !== 'undefined') {
+    mermaid.parse(processed);
+    mermaid.render(id, processed, null, function(svg) {
+      output.innerHTML = svg;
+      loading.style.display = 'none';
+    });
+  } else {
+    error.classList.remove('hidden');
+    error.textContent = 'Mermaid version not recognized';
+    loading.style.display = 'none';
+  }
 }
 
 function insertTemplate(type) {
