@@ -1,0 +1,470 @@
+<%- /* content block for layout */ '' %>
+<%
+  var months = ['一月', '二月', '三月', '四月', '五月', '六月', '七月', '八月', '九月', '十月', '十一月', '十二月'];
+  var weekDays = ['日', '一', '二', '三', '四', '五', '六'];
+%>
+
+<div>
+  <div class="mb-6">
+    <a href="/" class="text-sm text-blue-500 hover:text-blue-700">&larr; 返回首页</a>
+  </div>
+
+  <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 md:p-8">
+    <div class="flex items-center gap-3 mb-4">
+      <span class="text-3xl"><%- tool.icon %></span>
+      <div>
+        <h1 class="text-2xl font-bold text-gray-800"><%- tool.name %></h1>
+        <p class="text-sm text-gray-500"><%- tool.desc %></p>
+      </div>
+    </div>
+
+    <!-- Tab 切换 -->
+    <div class="flex flex-wrap gap-1 mb-6 border-b border-gray-200">
+      <button class="px-4 py-2.5 text-sm font-medium text-indigo-600 border-b-2 border-indigo-600 tab-btn active" data-tab="calendar" onclick="switchTab('calendar')">📅 月历</button>
+      <button class="px-4 py-2.5 text-sm font-medium text-gray-500 hover:text-gray-700 tab-btn" data-tab="calculator" onclick="switchTab('calculator')">🧮 日期计算</button>
+      <button class="px-4 py-2.5 text-sm font-medium text-gray-500 hover:text-gray-700 tab-btn" data-tab="worldclock" onclick="switchTab('worldclock')">🌍 世界时钟</button>
+      <button class="px-4 py-2.5 text-sm font-medium text-gray-500 hover:text-gray-700 tab-btn" data-tab="dayofyear" onclick="switchTab('dayofyear')">📆 年进度</button>
+    </div>
+
+    <!-- ==================== Tab 1: 日历 ==================== -->
+    <div id="tab-calendar" class="tab-content">
+      <div class="flex items-center justify-between mb-4">
+        <button onclick="prevMonth()" class="px-3 py-1.5 border rounded-lg hover:bg-gray-50 text-sm">&larr; 上月</button>
+        <h2 id="monthTitle" class="text-lg font-semibold text-gray-800"></h2>
+        <button onclick="nextMonth()" class="px-3 py-1.5 border rounded-lg hover:bg-gray-50 text-sm">下月 &rarr;</button>
+      </div>
+      <div class="flex items-center justify-center gap-4 mb-3">
+        <button onclick="todayMonth()" class="px-3 py-1 text-xs bg-indigo-50 text-indigo-600 rounded-lg hover:bg-indigo-100">回到今天</button>
+        <div class="flex items-center gap-2">
+          <select id="yearSelect" onchange="gotoYearMonth()" class="text-sm border rounded-lg px-2 py-1"></select>
+          <span class="text-gray-400">年</span>
+          <select id="monthSelect" onchange="gotoYearMonth()" class="text-sm border rounded-lg px-2 py-1"></select>
+          <span class="text-gray-400">月</span>
+        </div>
+      </div>
+      <table class="w-full border-collapse">
+        <thead>
+          <tr>
+            <% weekDays.forEach(function(d) { %>
+              <th class="p-2 text-sm font-medium text-gray-500 border-b"><%= d %></th>
+            <% }); %>
+          </tr>
+        </thead>
+        <tbody id="calendarBody"></tbody>
+      </table>
+      <div class="mt-3 text-center text-xs text-gray-400">
+        已高亮显示今天
+      </div>
+    </div>
+
+    <!-- ==================== Tab 2: 日期计算 ==================== -->
+    <div id="tab-calculator" class="tab-content" style="display:none">
+      <div class="grid md:grid-cols-2 gap-6">
+        <!-- 日期差计算 -->
+        <div class="bg-gray-50 rounded-xl p-5">
+          <h3 class="text-sm font-semibold text-gray-700 mb-3">📏 两个日期相差多少天</h3>
+          <div class="space-y-3">
+            <div>
+              <label class="text-xs text-gray-500 block mb-1">起始日期</label>
+              <input type="date" id="calDate1" class="w-full border rounded-lg px-3 py-2 text-sm">
+            </div>
+            <div>
+              <label class="text-xs text-gray-500 block mb-1">结束日期</label>
+              <input type="date" id="calDate2" class="w-full border rounded-lg px-3 py-2 text-sm">
+            </div>
+            <button onclick="calcDiff()" class="w-full px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 text-sm font-medium">计算</button>
+            <div id="diffResult" class="text-center text-sm text-gray-700 font-medium hidden"></div>
+          </div>
+        </div>
+        <!-- 日期推算 -->
+        <div class="bg-gray-50 rounded-xl p-5">
+          <h3 class="text-sm font-semibold text-gray-700 mb-3">🔢 日期推算</h3>
+          <div class="space-y-3">
+            <div>
+              <label class="text-xs text-gray-500 block mb-1">基准日期</label>
+              <input type="date" id="baseDate" class="w-full border rounded-lg px-3 py-2 text-sm">
+            </div>
+            <div class="flex items-center gap-2">
+              <input type="number" id="offsetDays" value="30" class="w-20 border rounded-lg px-3 py-2 text-sm text-center" min="-9999" max="9999">
+              <span class="text-sm text-gray-600">天后</span>
+              <button onclick="calcOffset()" class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 text-sm font-medium ml-auto">计算</button>
+            </div>
+            <div id="offsetResult" class="text-center text-sm text-gray-700 font-medium hidden"></div>
+          </div>
+        </div>
+      </div>
+      <div class="mt-4 bg-gray-50 rounded-xl p-5">
+        <h3 class="text-sm font-semibold text-gray-700 mb-3">📋 常用日期速查</h3>
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-2" id="quickDates"></div>
+      </div>
+    </div>
+
+    <!-- ==================== Tab 3: 世界时钟 ==================== -->
+    <div id="tab-worldclock" class="tab-content" style="display:none">
+      <div class="mb-4 flex items-center gap-3">
+        <input type="text" id="newTimezone" placeholder="输入城市名，如 Tokyo" class="flex-1 border rounded-lg px-3 py-2 text-sm">
+        <button onclick="addTimezone()" class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 text-sm font-medium">添加</button>
+      </div>
+      <div id="clockList" class="space-y-2"></div>
+      <div class="mt-4 pt-4 border-t border-gray-100">
+        <div class="flex items-center justify-center gap-4">
+          <button onclick="startClock()" class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 text-sm font-medium">▶ 开始刷新</button>
+          <button onclick="stopClock()" class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 text-sm">⏹ 停止</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ==================== Tab 4: 年进度 ==================== -->
+    <div id="tab-dayofyear" class="tab-content" style="display:none">
+      <div class="bg-gray-50 rounded-xl p-6">
+        <div class="text-center mb-6">
+          <div class="text-4xl font-bold text-indigo-600" id="todayDayOfYear"></div>
+          <div class="text-sm text-gray-500 mt-1">今天是一年中的第几天</div>
+        </div>
+        <div class="mb-4">
+          <div class="flex justify-between text-sm text-gray-600 mb-1">
+            <span>年进度</span>
+            <span id="yearProgressPercent">0%</span>
+          </div>
+          <div class="w-full bg-gray-200 rounded-full h-3">
+            <div id="yearProgressBar" class="bg-indigo-500 h-3 rounded-full transition-all duration-500" style="width:0%"></div>
+          </div>
+        </div>
+        <div class="grid grid-cols-2 gap-4 text-center text-sm mt-6">
+          <div class="bg-white rounded-lg p-3">
+            <div class="text-lg font-bold text-gray-700" id="daysPassed">0</div>
+            <div class="text-xs text-gray-400">已过去</div>
+          </div>
+          <div class="bg-white rounded-lg p-3">
+            <div class="text-lg font-bold text-gray-700" id="daysRemain">0</div>
+            <div class="text-xs text-gray-400">还剩</div>
+          </div>
+        </div>
+        <div class="mt-6">
+          <h3 class="text-sm font-semibold text-gray-700 mb-3">📅 重要日期倒计时</h3>
+          <div id="countdownList" class="space-y-2"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ===== Tab 切换 =====
+function switchTab(id) {
+  document.querySelectorAll('.tab-content').forEach(function(el) { el.style.display = 'none'; });
+  document.querySelectorAll('.tab-btn').forEach(function(el) { 
+    el.classList.remove('text-indigo-600', 'border-indigo-600');
+    el.classList.add('text-gray-500');
+  });
+  document.getElementById('tab-' + id).style.display = 'block';
+  var btn = document.querySelector('.tab-btn[data-tab="' + id + '"]');
+  if (btn) {
+    btn.classList.remove('text-gray-500');
+    btn.classList.add('text-indigo-600', 'border-indigo-600');
+  }
+  // 特定 tab 的初始化
+  if (id === 'calendar') renderCalendar();
+  if (id === 'worldclock') startClock();
+  if (id === 'dayofyear') updateDayOfYear();
+  if (id === 'calculator') initCalculator();
+}
+
+// ===== Tab 1: 月历 =====
+var calYear, calMonth;
+
+function initCalendar() {
+  var now = new Date();
+  calYear = now.getFullYear();
+  calMonth = now.getMonth();
+  // 填充年月下拉
+  var ysel = document.getElementById('yearSelect');
+  for (var y = calYear - 50; y <= calYear + 10; y++) {
+    var o = document.createElement('option');
+    o.value = y; o.textContent = y;
+    if (y === calYear) o.selected = true;
+    ysel.appendChild(o);
+  }
+  var msel = document.getElementById('monthSelect');
+  var mnames = ['一月','二月','三月','四月','五月','六月','七月','八月','九月','十月','十一月','十二月'];
+  for (var i = 0; i < 12; i++) {
+    var o = document.createElement('option');
+    o.value = i; o.textContent = mnames[i];
+    if (i === calMonth) o.selected = true;
+    msel.appendChild(o);
+  }
+  renderCalendar();
+}
+
+function renderCalendar() {
+  var title = document.getElementById('monthTitle');
+  var mnames = ['一月','二月','三月','四月','五月','六月','七月','八月','九月','十月','十一月','十二月'];
+  title.textContent = calYear + '年 ' + mnames[calMonth];
+
+  var today = new Date();
+  var firstDay = new Date(calYear, calMonth, 1);
+  var lastDay = new Date(calYear, calMonth + 1, 0);
+  var startWeekday = firstDay.getDay();
+  var daysInMonth = lastDay.getDate();
+
+  var tbody = document.getElementById('calendarBody');
+  tbody.innerHTML = '';
+  var cells = [];
+  // 空白格
+  for (var i = 0; i < startWeekday; i++) cells.push('');
+  // 日期格
+  for (var d = 1; d <= daysInMonth; d++) {
+    var isToday = (calYear === today.getFullYear() && calMonth === today.getMonth() && d === today.getDate());
+    var cell = '<div class="w-8 h-8 flex items-center justify-center mx-auto rounded-full text-sm ' +
+      (isToday ? 'bg-indigo-600 text-white font-bold' : 'text-gray-700 hover:bg-gray-100') + '">' + d + '</div>';
+    cells.push(cell);
+  }
+  // 填满最后一行
+  while (cells.length % 7 !== 0) cells.push('');
+
+  for (var r = 0; r < cells.length / 7; r++) {
+    var tr = document.createElement('tr');
+    for (var c = 0; c < 7; c++) {
+      var td = document.createElement('td');
+      td.className = 'p-1 text-center border-b border-gray-50';
+      td.innerHTML = cells[r * 7 + c] || '';
+      tr.appendChild(td);
+    }
+    tbody.appendChild(tr);
+  }
+}
+
+function prevMonth() {
+  calMonth--;
+  if (calMonth < 0) { calMonth = 11; calYear--; }
+  updateSelects();
+  renderCalendar();
+}
+
+function nextMonth() {
+  calMonth++;
+  if (calMonth > 11) { calMonth = 0; calYear++; }
+  updateSelects();
+  renderCalendar();
+}
+
+function todayMonth() {
+  var now = new Date();
+  calYear = now.getFullYear();
+  calMonth = now.getMonth();
+  updateSelects();
+  renderCalendar();
+}
+
+function gotoYearMonth() {
+  calYear = parseInt(document.getElementById('yearSelect').value);
+  calMonth = parseInt(document.getElementById('monthSelect').value);
+  renderCalendar();
+}
+
+function updateSelects() {
+  document.getElementById('yearSelect').value = calYear;
+  document.getElementById('monthSelect').value = calMonth;
+}
+
+// ===== Tab 2: 日期计算 =====
+function initCalculator() {
+  var now = new Date();
+  var y = now.getFullYear();
+  var m = String(now.getMonth() + 1).padStart(2, '0');
+  var d = String(now.getDate()).padStart(2, '0');
+  var today = y + '-' + m + '-' + d;
+  if (!document.getElementById('calDate1').value) document.getElementById('calDate1').value = today;
+  if (!document.getElementById('calDate2').value) document.getElementById('calDate2').value = today;
+  if (!document.getElementById('baseDate').value) document.getElementById('baseDate').value = today;
+  renderQuickDates();
+}
+
+function calcDiff() {
+  var d1 = new Date(document.getElementById('calDate1').value);
+  var d2 = new Date(document.getElementById('calDate2').value);
+  var diff = Math.abs(d2 - d1) / (1000 * 60 * 60 * 24);
+  var el = document.getElementById('diffResult');
+  el.style.display = 'block';
+  el.innerHTML = '相差 <strong>' + diff + '</strong> 天' + (diff >= 30 ? '（约 ' + Math.round(diff/30) + ' 个月）' : '');
+}
+
+function calcOffset() {
+  var base = new Date(document.getElementById('baseDate').value);
+  var offset = parseInt(document.getElementById('offsetDays').value) || 0;
+  base.setDate(base.getDate() + offset);
+  var y = base.getFullYear();
+  var m = String(base.getMonth() + 1).padStart(2, '0');
+  var d = String(base.getDate()).padStart(2, '0');
+  var el = document.getElementById('offsetResult');
+  el.style.display = 'block';
+  el.innerHTML = offset + ' 天后是：<strong>' + y + '-' + m + '-' + d + '</strong>';
+}
+
+function renderQuickDates() {
+  var now = new Date();
+  var el = document.getElementById('quickDates');
+  var dates = [
+    { label: '今天', date: now },
+    { label: '明天', date: new Date(now.getTime() + 86400000) },
+    { label: '本周一', date: new Date(now.getTime() - (now.getDay() || 7) * 86400000 + 86400000) },
+    { label: '本周日', date: new Date(now.getTime() + (7 - (now.getDay() || 7)) * 86400000) },
+    { label: '下周一', date: new Date(now.getTime() + (8 - (now.getDay() || 7)) * 86400000) },
+    { label: '月末', date: new Date(now.getFullYear(), now.getMonth() + 1, 0) },
+    { label: '年底', date: new Date(now.getFullYear(), 11, 31) },
+  ];
+  el.innerHTML = dates.map(function(item) {
+    var y = item.date.getFullYear();
+    var m = String(item.date.getMonth() + 1).padStart(2, '0');
+    var d = String(item.date.getDate()).padStart(2, '0');
+    return '<div class="bg-white rounded-lg p-2 text-center text-sm cursor-pointer hover:bg-indigo-50" onclick="setCalDates(\'' + y + '-' + m + '-' + d + '\')"><span class="text-gray-500 text-xs">' + item.label + '</span><br><span class="font-medium text-gray-700">' + m + '/' + d + '</span></div>';
+  }).join('');
+}
+
+function setCalDates(dateStr) {
+  document.getElementById('calDate1').value = dateStr;
+  document.getElementById('baseDate').value = dateStr;
+}
+
+// ===== Tab 3: 世界时钟 =====
+var clockTimer = null;
+var defaultTimezones = [
+  { label: '北京 🏯', tz: 'Asia/Shanghai' },
+  { label: '东京 🗼', tz: 'Asia/Tokyo' },
+  { label: '纽约 🗽', tz: 'America/New_York' },
+  { label: '伦敦 🎡', tz: 'Europe/London' },
+  { label: '悉尼 🏄', tz: 'Australia/Sydney' },
+  { label: '迪拜 🏜️', tz: 'Asia/Dubai' },
+];
+
+function startClock() {
+  stopClock();
+  renderClocks();
+  clockTimer = setInterval(renderClocks, 1000);
+}
+
+function stopClock() {
+  if (clockTimer) { clearInterval(clockTimer); clockTimer = null; }
+}
+
+function renderClocks() {
+  var now = new Date();
+  var items = getTimezoneList();
+  var el = document.getElementById('clockList');
+  el.innerHTML = items.map(function(item) {
+    try {
+      var timeStr = now.toLocaleString('zh-CN', { timeZone: item.tz, hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
+      var dateStr = now.toLocaleString('zh-CN', { timeZone: item.tz, month: '2-digit', day: '2-digit' });
+      var offset = getOffset(item.tz);
+      return '<div class="flex items-center justify-between bg-gray-50 rounded-lg px-4 py-3">' +
+        '<div><span class="font-medium text-gray-800">' + item.label + '</span><br><span class="text-xs text-gray-400">UTC' + offset + '</span></div>' +
+        '<div class="text-right"><span class="text-xl font-bold text-gray-800">' + timeStr + '</span><br><span class="text-xs text-gray-400">' + dateStr + '</span></div>' +
+        '</div>';
+    } catch(e) {
+      return '';
+    }
+  }).join('');
+}
+
+function getOffset(tz) {
+  try {
+    var now = new Date();
+    var utc = now.toLocaleString('zh-CN', { timeZone: 'UTC', hour: '2-digit', minute: '2-digit', hour12: false, hourCycle: 'h23' });
+    var local = now.toLocaleString('zh-CN', { timeZone: tz, hour: '2-digit', minute: '2-digit', hour12: false, hourCycle: 'h23' });
+    var utcH = parseInt(utc.split(':')[0]);
+    var localH = parseInt(local.split(':')[0]);
+    // 处理跨天
+    if (localH < utcH && localH <= 6) localH += 24;
+    if (utcH < localH && utcH <= 6) utcH += 24;
+    var diff = localH - utcH;
+    var sign = diff >= 0 ? '+' : '';
+    return sign + diff;
+  } catch(e) { return ''; }
+}
+
+function getTimezoneList() {
+  var stored = localStorage.getItem('scu_cal_timezones');
+  if (stored) {
+    try { return JSON.parse(stored); } catch(e) {}
+  }
+  return defaultTimezones;
+}
+
+function saveTimezoneList(list) {
+  localStorage.setItem('scu_cal_timezones', JSON.stringify(list));
+}
+
+function addTimezone() {
+  var input = document.getElementById('newTimezone');
+  var val = input.value.trim();
+  if (!val) return;
+  // 尝试解析
+  var tzMap = {
+    'tokyo': 'Asia/Tokyo', '东京': 'Asia/Tokyo',
+    'new york': 'America/New_York', 'nyc': 'America/New_York', '纽约': 'America/New_York',
+    'london': 'Europe/London', '伦敦': 'Europe/London',
+    'sydney': 'Australia/Sydney', '悉尼': 'Australia/Sydney',
+    'dubai': 'Asia/Dubai', '迪拜': 'Asia/Dubai',
+    'paris': 'Europe/Paris', '巴黎': 'Europe/Paris',
+    'berlin': 'Europe/Berlin', '柏林': 'Europe/Berlin',
+    'moscow': 'Europe/Moscow', '莫斯科': 'Europe/Moscow',
+    'seoul': 'Asia/Seoul', '首尔': 'Asia/Seoul',
+    'singapore': 'Asia/Singapore', '新加坡': 'Asia/Singapore',
+    'hong kong': 'Asia/Hong_Kong', '香港': 'Asia/Hong_Kong',
+    'san francisco': 'America/Los_Angeles', 'sf': 'America/Los_Angeles', '旧金山': 'America/Los_Angeles',
+    'los angeles': 'America/Los_Angeles', 'la': 'America/Los_Angeles', '洛杉矶': 'America/Los_Angeles',
+    'shanghai': 'Asia/Shanghai', '上海': 'Asia/Shanghai',
+    'beijing': 'Asia/Shanghai', '北京': 'Asia/Shanghai',
+  };
+  var key = val.toLowerCase().trim();
+  var tz = tzMap[key] || val;
+  var list = getTimezoneList();
+  list.push({ label: val, tz: tz });
+  saveTimezoneList(list);
+  input.value = '';
+  renderClocks();
+}
+
+// ===== Tab 4: 年进度 =====
+function updateDayOfYear() {
+  var now = new Date();
+  var start = new Date(now.getFullYear(), 0, 0);
+  var end = new Date(now.getFullYear(), 11, 31);
+  var diff = now - start;
+  var totalDay = (end - start) / (1000 * 60 * 60 * 24);
+  var dayOfYear = Math.floor(diff / (1000 * 60 * 60 * 24));
+  var pct = (dayOfYear / totalDay * 100).toFixed(1);
+  var remain = totalDay - dayOfYear;
+
+  document.getElementById('todayDayOfYear').textContent = dayOfYear;
+  document.getElementById('yearProgressPercent').textContent = pct + '%';
+  document.getElementById('yearProgressBar').style.width = pct + '%';
+  document.getElementById('daysPassed').textContent = dayOfYear;
+  document.getElementById('daysRemain').textContent = remain;
+
+  // 倒计时
+  var cdList = document.getElementById('countdownList');
+  var targets = [
+    { label: '🎄 圣诞节', m: 12, d: 25 },
+    { label: '🎆 元旦', m: 1, d: 1, nextYear: true },
+    { label: '🧧 春节', m: 2, d: 17, nextYear: true },
+    { label: '🎂 我的生日', m: 6, d: 1 },
+  ];
+  cdList.innerHTML = targets.map(function(t) {
+    var targetDate = new Date(now.getFullYear(), t.m - 1, t.d);
+    if (t.nextYear && targetDate < now) targetDate = new Date(now.getFullYear() + 1, t.m - 1, t.d);
+    var diffDays = Math.ceil((targetDate - now) / (1000 * 60 * 60 * 24));
+    if (diffDays <= 0) return '';
+    return '<div class="flex items-center justify-between bg-white rounded-lg px-3 py-2"><span class="text-sm text-gray-700">' + t.label + '</span><span class="text-sm font-medium text-indigo-600">' + diffDays + ' 天后</span></div>';
+  }).filter(Boolean).join('');
+  if (!cdList.innerHTML) cdList.innerHTML = '<div class="text-sm text-gray-400 text-center py-4">暂无倒计时</div>';
+}
+
+// ===== 初始化 =====
+document.addEventListener('DOMContentLoaded', function() {
+  initCalendar();
+  initCalculator();
+  updateDayOfYear();
+  // 默认启动世界时钟时钟（但不自动刷新，等切到 tab 再启动）
+});
+</script>
