@@ -41,6 +41,7 @@ const tools = [
   // ── 开发调试 ──
   { id: 'json',      name: 'JSON 格式化',       desc: 'JSON 格式化、压缩、校验',              icon: '🔧', category: 'dev' },
   { id: 'regex',     name: '正则表达式测试',    desc: '正则匹配、替换、高亮预览',            icon: '🔍', category: 'dev' },
+  { id: 'regexbuilder',name: '正则表达式构造器',   desc: '点选构建正则，预设模式+实时测试',        icon: '🔧', category: 'dev' },
   { id: 'cron',      name: 'Cron 表达式生成',   desc: '可视化生成 cron 语法，预览执行时间',   icon: '⏱️', category: 'dev' },
   { id: 'hash',      name: 'Hash 生成器',       desc: 'MD5/SHA-1/SHA-256/SHA-512 哈希计算',  icon: '🔑', category: 'dev' },
   { id: 'jwt',       name: 'JWT 解码器',        desc: '解码 JWT Token，查看 Header/Payload',  icon: '🔐', category: 'dev' },
